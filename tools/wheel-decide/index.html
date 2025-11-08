@@ -20,7 +20,7 @@
     html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:"Courier Prime",monospace}
     a{color:inherit;text-decoration:none}
 
-    /* ===== Background layers (same as home) ===== */
+    /* Background layers (same as home) */
     #bgCanvas{ position:fixed; inset:0; z-index:0; }
     .scanlines{ position:fixed; inset:0; pointer-events:none; z-index:0;
       background: repeating-linear-gradient(to bottom,
@@ -29,7 +29,7 @@
     .vignette{ position:fixed; inset:0; z-index:0; pointer-events:none;
       background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%); }
 
-    /* ===== Header (matches home) ===== */
+    /* Header */
     .site-header{
       position:sticky; top:0; z-index:20;
       background:rgba(0,0,0,.85);
@@ -41,7 +41,7 @@
       display:flex; align-items:center; justify-content:space-between; gap:16px;
     }
     .brand{display:flex; align-items:center; gap:12px}
-    .brand img{height:36px; width:auto; filter: drop-shadow(0 0 10px rgba(255,255,255,.12)); background-color: #333; border-radius: 4px;}
+    .brand img{height:36px; width:auto; filter: drop-shadow(0 0 10px rgba(255,255,255,.12)); background:#111; border-radius:4px}
     .brand .name{ font-family:Orbitron, sans-serif; letter-spacing:2px; font-size:1rem;
       animation:glitch 2.2s linear infinite; }
     @keyframes glitch{
@@ -51,12 +51,12 @@
     nav a{display:inline-block; margin-left:10px; padding:6px 10px; border:1px solid #2e2e2e; border-radius:8px}
     nav a:hover{border-color:#fff; background:#fff; color:#000}
 
-    /* ===== Page title ===== */
+    /* Title */
     .hero{ max-width:var(--maxw); margin:26px auto 8px; padding:0 16px; text-align:center; position:relative; z-index:5; }
     .title{ font-family:Orbitron, sans-serif; letter-spacing:3px; font-size:2rem; margin:4px 0 6px; text-shadow:0 0 20px rgba(255,255,255,.08); }
     .subtitle{ color:var(--muted); margin:0; }
 
-    /* ===== Panel & controls (lightweight, no heavy glow) ===== */
+    /* Panel & controls (lightweight) */
     .wrap{ max-width:var(--maxw); margin:18px auto 40px; padding:0 16px; position:relative; z-index:5; }
     .panel{ background:rgba(15,15,16,.55); border:1px solid var(--frame); border-radius:14px; padding:18px; }
     .controls{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:0 0 12px; }
@@ -65,7 +65,7 @@
     .ui:hover{ background:#fff; color:#000 }
     .note{ color:#9f9f9f; font-size:.9rem; text-align:center; margin-top:10px }
 
-    /* ===== Wheel ===== */
+    /* Wheel */
     #roulette-wrap{ position:relative; width:100%; max-width:820px; margin:0 auto; }
     #roulette{ display:block; width:100%; height:auto; }
     .pointer{
@@ -85,22 +85,14 @@
   <!-- Header -->
   <div class="site-header">
     <div class="bar">
-      <!-- 
-        FIX: Changed href to "#" and img src to a placeholder.
-        The original paths like "/basement-noise/..." will only work
-        if hosted in that specific sub-directory on a server.
-      -->
-      <a class="brand" href="#">
-        <img src="https://placehold.co/100x36/0f0f10/f3f3f3?text=Basement+Noise" 
-             alt="Basement Noise"
-             onerror="this.style.display='none'"/>
+      <a class="brand" href="/basement-noise/">
+        <img src="/basement-noise/basement_noise_logo_design.png" alt="Basement Noise"/>
         <span class="name">Basement Noise</span>
       </a>
       <nav>
-        <!-- FIX: Changed hrefs to "#" to prevent 404 errors -->
-        <a href="#">Home</a>
-        <a href="#">Wheel Decide</a>
-        <a href="#">Producer Linker</a>
+        <a href="/basement-noise/">Home</a>
+        <a href="/basement-noise/tools/wheel-decide/">Wheel Decide</a>
+        <a href="/basement-noise/tools/producer-linker/">Producer Linker</a>
       </nav>
     </div>
   </div>
@@ -122,10 +114,10 @@
 
       <div id="roulette-wrap">
         <div class="pointer"></div>
-        <!-- p5.js canvas will be injected here by setup() -->
+        <!-- p5.js canvas injected here -->
       </div>
 
-      <p class="note">Tip: first click unlocks audio • drag to spin when idle • labels are the file names you upload.</p>
+      <p class="note">Tip: first click unlocks audio • drag to spin when idle • labels use your file names.</p>
     </section>
   </main>
 
@@ -136,21 +128,16 @@
   <div class="scanlines"></div>
   <div class="vignette"></div>
 
-  <!-- ======== Animated site background (same as home) ======== -->
+  <!-- Animated site background (same as home) -->
   <script>
     const bg = document.getElementById('bgCanvas');
     const bctx = bg.getContext('2d', { alpha:false });
     let BW, BH, BT = 0;
     function bgResize(){ BW = bg.width = innerWidth; BH = bg.height = innerHeight; }
     addEventListener('resize', bgResize); bgResize();
-
     function drawGrain(){
-      const img = bctx.getImageData(0,0,BW,BH);
-      const d = img.data;
-      for(let i=0;i<d.length;i+=4){
-        const n = 8 + (Math.random()*12)|0;
-        d[i]=d[i+1]=d[i+2]=n;
-      }
+      const img = bctx.getImageData(0,0,BW,BH); const d = img.data;
+      for(let i=0;i<d.length;i+=4){ const n = 8 + (Math.random()*12)|0; d[i]=d[i+1]=d[i+2]=n; }
       bctx.putImageData(img,0,0);
     }
     function drawStairs(){
@@ -161,58 +148,72 @@
       for(let s=0;s<steps;s++){ bctx.strokeRect(rx-s*24, ry-s*16, 140, 36); }
       bctx.restore();
     }
-    function btick(now){
-      BT = now; bctx.fillStyle='#000'; bctx.fillRect(0,0,BW,BH);
-      drawGrain(); drawStairs(); requestAnimationFrame(btick);
-    }
+    function btick(now){ BT = now; bctx.fillStyle='#000'; bctx.fillRect(0,0,BW,BH); drawGrain(); drawStairs(); requestAnimationFrame(btick); }
     requestAnimationFrame(btick);
   </script>
 
-  <!-- ======== Roulette (p5.js) ======== -->
+  <!-- Roulette (p5.js) -->
   <script>
-    // State
-    let pg;                      // offscreen buffer
+    // ----- State -----
+    let pg;                    // offscreen buffer
     let wheelSize, cx, cy;
     let angle = 0, spinVel = 0, spinning = false;
-    let slices = [];             // {name, file, sound}
+    let slices = [];           // [{name, fileUrl, sound}]
     let sliceAngle = 0;
 
     let audioReady = false;
     let confetti = [];
     let winIndex = -1;
     let lastPlayed = null;
+    let isLoading = false;
+
+    let tickOsc, tickEnv;      // subtle tick during spin
 
     const wrap = document.getElementById('roulette-wrap');
-    let p5canvas; // Reference to the p5.js canvas
+    let p5canvas;
 
+    // Audio unlock + tiny tick setup
     function ensureAudio(){
       if (audioReady) return true;
-      if (typeof userStartAudio === 'function'){ userStartAudio(); audioReady = true; return true; }
-      return false;
+      if (typeof userStartAudio === 'function'){ userStartAudio(); }
+      try{
+        tickOsc = new p5.Oscillator('square'); tickOsc.freq(880); tickOsc.amp(0); tickOsc.start();
+        tickEnv = new p5.Envelope(); tickEnv.setADSR(0.001, 0.03, 0, 0.03); tickEnv.setRange(0.06, 0);
+        audioReady = true; 
+      }catch(e){ /* ignore */ }
+      return true;
     }
+    document.addEventListener('pointerdown', ensureAudio, { once:true });
 
-    function addSamplesFromFiles(files){
+    // Add files
+    function addSamplesFromFiles(fileList){
+      isLoading = true; rebuildWheel();
+      const files = Array.from(fileList);
+      if (!files.length){ isLoading = false; rebuildWheel(); return; }
+
+      let left = files.length;
+      const fresh = [];
+
+      function doneOne(){ left--; if (left<=0){ isLoading = false; slices.push(...fresh); rebuildWheel(); } }
+
       for (const f of files){
         const url = URL.createObjectURL(f);
-        loadSound(url, snd=>{
-          slices.push({ name:f.name, file:url, sound:snd });
-          rebuildWheel();
-        }, err=>console.warn('loadSound error', err));
+        loadSound(url,
+          snd => { fresh.push({ name:f.name, fileUrl:url, sound:snd }); doneOne(); },
+          err => { console.warn('loadSound error:', f.name, err); doneOne(); }
+        );
       }
     }
 
     // p5
     function setup(){
-      const sz = Math.min(820, wrap.clientWidth);
+      const sz = Math.max(360, Math.min(820, wrap.clientWidth || 0, window.innerWidth*0.9 || 0));
       p5canvas = createCanvas(sz, sz); 
       p5canvas.parent('roulette-wrap');
-      
-      // Move canvas to be the first child, so pointer is on top
-      const canvasEl = p5canvas.elt;
-      canvasEl.id = "roulette"; // Give it the ID the CSS expects
-      wrap.prepend(canvasEl);
+      p5canvas.elt.id = 'roulette';
+      wrap.prepend(p5canvas.elt);
 
-      wheelSize = min(width, height); cx = width/2; cy = height/2;
+      wheelSize = sz; cx = wheelSize/2; cy = wheelSize/2;
 
       pixelDensity(1);
       textFont('Courier New');
@@ -221,33 +222,29 @@
       pg = createGraphics(wheelSize, wheelSize);
       pg.angleMode(RADIANS); pg.textAlign(CENTER, CENTER); pg.textFont('Courier New');
 
-      // unlock on first click
       p5canvas.mousePressed(()=>ensureAudio());
-
-      // Initial draw
       rebuildWheel();
     }
 
     function windowResized(){
-      const sz = Math.min(820, wrap.clientWidth);
-      resizeCanvas(sz, sz);
-      wheelSize = min(width, height); cx = width/2; cy = height/2;
-      
-      // Re-create graphics buffer for new size
-      pg = createGraphics(wheelSize, wheelSize);
-      pg.angleMode(RADIANS); pg.textAlign(CENTER, CENTER); pg.textFont('Courier New');
-      
-      redrawWheel();
+      const sz = Math.max(360, Math.min(820, wrap.clientWidth || 0, window.innerWidth*0.9 || 0));
+      if (sz && sz !== wheelSize){
+        resizeCanvas(sz, sz);
+        wheelSize = sz; cx = sz/2; cy = sz/2;
+        pg = createGraphics(wheelSize, wheelSize);
+        pg.angleMode(RADIANS); pg.textAlign(CENTER, CENTER); pg.textFont('Courier New');
+        redrawWheel();
+      }
     }
 
     function draw(){
       clear();
 
-      // spin physics
       if (spinning){
         angle += spinVel;
-        spinVel *= 0.985;
-        if (abs(spinVel) < 0.0025){
+        spinVel *= 0.988;                 // friction
+        if (tickEnv && random()<0.12){ tickEnv.play(tickOsc); }
+        if (abs(spinVel) < 0.0022){
           spinVel = 0; spinning = false;
           snapToSlice();
           celebrate(winIndex);
@@ -260,7 +257,7 @@
       translate(cx, cy);
       rotate(angle);
       imageMode(CENTER);
-      image(pg, 0, 0);
+      if (pg.width>0 && pg.height>0) image(pg, 0, 0);
       pop();
 
       // confetti
@@ -272,55 +269,48 @@
       }
     }
 
-    function rebuildWheel(){ 
-      sliceAngle = TWO_PI / max(1, slices.length || 1); 
-      redrawWheel(); 
-    }
+    function rebuildWheel(){ sliceAngle = TWO_PI / Math.max(1, slices.length || 1); redrawWheel(); }
 
     function redrawWheel(){
+      if (pg.width<=0 || pg.height<=0) return;
+
       pg.clear();
       const r = wheelSize * 0.42;
-      const rLabel = r * 0.70;
+      const rLabel = r * 0.72;
 
       // ring
       pg.noFill(); pg.stroke(255); pg.strokeWeight(2);
       pg.circle(wheelSize/2, wheelSize/2, r*2);
 
-      if (!slices.length) {
-        // Draw placeholder text if no slices
-        pg.push();
-        pg.noStroke(); pg.fill(100); pg.textSize(14);
-        pg.text("Click 'Upload Samples' to begin", wheelSize/2, wheelSize/2);
-        pg.pop();
+      if (isLoading){
+        pg.noStroke(); pg.fill(150); pg.textSize(16);
+        pg.text("Loading samples…", wheelSize/2, wheelSize/2);
+        return;
+      }
+      if (!slices.length){
+        pg.noStroke(); pg.fill(110); pg.textSize(14);
+        pg.text("Click ‘Upload Samples’ to begin", wheelSize/2, wheelSize/2);
         return;
       }
 
       for (let i=0;i<slices.length;i++){
-        const a0 = i*sliceAngle - HALF_PI;    // start at top
+        const a0 = i*sliceAngle - HALF_PI;
         const a1 = a0 + sliceAngle;
 
         pg.noStroke(); pg.fill(i%2?30:40);
         pg.arc(wheelSize/2, wheelSize/2, r*2, r*2, a0, a1, PIE);
 
         pg.stroke(90); pg.strokeWeight(1);
-        pg.line(wheelSize/2 + cos(a0)*r, wheelSize/2 + sin(a0)*r, wheelSize/2, wheelSize/2);
+        pg.line(wheelSize/2 + Math.cos(a0)*r, wheelSize/2 + Math.sin(a0)*r, wheelSize/2, wheelSize/2);
 
-        // label
-        pg.push(); 
-        pg.translate(wheelSize/2, wheelSize/2); 
-        const mid = a0 + sliceAngle/2; 
+        // label (kept upright)
+        pg.push();
+        pg.translate(wheelSize/2, wheelSize/2);
+        const mid = a0 + sliceAngle/2;
         pg.rotate(mid);
         pg.noStroke(); pg.fill(200); pg.textSize(12);
-        
-        // Adjust text position based on rotation for readability
-        // (This is a simple fix, better would be to flip text)
-        if (mid > HALF_PI && mid < PI + HALF_PI) {
-            pg.rotate(PI);
-            pg.text(truncLabel(slices[i].name), 0, rLabel); // Flipped
-        } else {
-            pg.text(truncLabel(slices[i].name), 0, -rLabel); // Normal
-        }
-        
+        if (mid > HALF_PI && mid < PI + HALF_PI){ pg.rotate(PI); pg.text(truncLabel(slices[i].name), 0, rLabel); }
+        else { pg.text(truncLabel(slices[i].name), 0, -rLabel); }
         pg.pop();
       }
 
@@ -330,39 +320,40 @@
     }
 
     function truncLabel(s){
-      const max = 26;
+      if (!s) return "[Unnamed]";
+      const max = 22;
       if (s.length <= max) return s;
       const dot = s.lastIndexOf('.');
       const base = dot>0 ? s.slice(0, dot) : s;
-      return base.length > max ? base.slice(0, max-1)+'…' : base;
+      return base.length > max ? base.slice(0,max-1)+'…' : base;
     }
 
     // Spin
     function spin(){
       if (!slices.length || spinning) return;
       ensureAudio();
-      spinVel = random(0.25, 0.35);    // initial CW velocity
+      // reset winner highlight/confetti
+      winIndex = -1; confetti.length = 0; redrawWheel();
+
+      spinVel = random(0.25, 0.35);
       spinning = true;
+
       if (lastPlayed && lastPlayed.isPlaying()) lastPlayed.stop();
-      // Redraw wheel to clear any previous winner highlights
-      redrawWheel();
     }
 
     function snapToSlice(){
-      // pointer on RIGHT (0 rad); “facing” angle in wheel space is (-angle)
       const facing = ((-angle) % TWO_PI + TWO_PI) % TWO_PI;
-      // Slices start at -HALF_PI (top). Normalize facing angle to this start.
-      const idx = floor(((facing + HALF_PI) % TWO_PI) / sliceAngle); 
+      const idx = floor(((facing + HALF_PI) % TWO_PI) / sliceAngle);
       winIndex = constrain(idx, 0, slices.length-1);
 
-      // Snap to the middle of the winning slice
       const sliceMid = winIndex*sliceAngle + sliceAngle/2 - HALF_PI;
-      angle = -sliceMid; // center that slice under pointer (+X)
+      angle = -sliceMid;
 
       drawWinnerEdge(winIndex);
     }
 
     function drawWinnerEdge(i){
+      if (pg.width<=0 || pg.height<=0) return;
       const r = wheelSize * 0.42;
       const a0 = i*sliceAngle - HALF_PI, a1 = a0 + sliceAngle;
       pg.push(); pg.noFill(); pg.stroke(255); pg.strokeWeight(3);
@@ -373,7 +364,7 @@
       const ring = document.createElement('div');
       ring.className = 'win-ring';
       wrap.appendChild(ring);
-      setTimeout(()=> wrap.removeChild(ring), 820);
+      setTimeout(()=>{ if (ring.parentElement===wrap) wrap.removeChild(ring); }, 820);
 
       const n = 70;
       for (let k=0;k<n;k++){
@@ -388,7 +379,7 @@
       snd.stop(); snd.setVolume(0.9); snd.play(); lastPlayed = snd;
     }
 
-    // Controls (called by buttons)
+    // Buttons
     window.SR_upload = () => {
       ensureAudio();
       const el = document.createElement('input');
@@ -400,37 +391,19 @@
     window.SR_clear = () => {
       if (lastPlayed && lastPlayed.isPlaying()) lastPlayed.stop();
       slices.forEach(s => s.sound && s.sound.stop());
-      slices = []; winIndex = -1; angle = 0; spinVel = 0; spinning = false; rebuildWheel();
+      isLoading = false;
+      slices = []; winIndex = -1; angle = 0; spinVel = 0; spinning = false; confetti.length=0;
+      rebuildWheel();
     };
 
-    // Optional drag spin when idle
-    let prevX = null;
-    let dragStartAngle = null;
-    
-    function mousePressed(){ 
-      // Only track presses inside the canvas
-      if (mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
-        prevX = mouseX; 
-        dragStartAngle = angle;
-      }
-    }
-    
-    function mouseDragged(){ 
-      if (spinning || prevX === null) return; 
-      
-      let dx = mouseX - prevX;
-      angle += dx * 0.005; // Apply rotation
-      
-      prevX = mouseX; // Update previous X for next frame
-    }
-    
-    function mouseReleased(){ 
-      prevX = null; 
-      
-      // If we weren't spinning and we just dragged, snap to the nearest slice
-      if (!spinning && dragStartAngle !== null && dragStartAngle !== angle) {
-          snapToSlice();
-          playWinner(winIndex);
+    // Drag-to-spin (idle)
+    let prevX = null, dragStartAngle = null;
+    function mousePressed(){ if (mouseX>=0&&mouseX<=width&&mouseY>=0&&mouseY<=height){ prevX = mouseX; dragStartAngle = angle; } }
+    function mouseDragged(){ if (!spinning && prevX!==null){ const dx = mouseX - prevX; angle += dx*0.005; prevX = mouseX; } }
+    function mouseReleased(){
+      prevX = null;
+      if (!spinning && dragStartAngle!==null && dragStartAngle!==angle){
+        snapToSlice(); playWinner(winIndex);
       }
       dragStartAngle = null;
     }
