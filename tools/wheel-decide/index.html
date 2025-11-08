@@ -1,376 +1,299 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Basement Noise • Sample Roulette</title>
+<script>
+/* ======== p5 + Wheel State ======== */
+let pg;                     // offscreen buffer for crisp wheel rendering
+let wheelSize, cx, cy;      // responsive sizing
+let angle = 0;              // current rotation
+let spinVel = 0;            // angular velocity
+let spinning = false;
+let slices = [];            // {name, file, sound:p5.SoundFile|null}
+let sliceAngle = 0;
 
-  <!-- p5 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/addons/p5.sound.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Courier+Prime&display=swap" rel="stylesheet"/>
+let audioReady = false;
+let confetti = [];
+let winIndex = -1;
+let lastPlayed = null;
 
-  <style>
-    :root{
-      --ink:#f3f3f3; --muted:#bcbcbc; --maxw:1100px;
+/* DOM refs */
+const fileInput = document.getElementById('file-input') || null; // if you used a hidden input
+const wrap = document.getElementById('roulette-wrap');
+
+/* ========== Audio unlock ========== */
+function ensureAudio() {
+  if (audioReady) return true;
+  if (typeof userStartAudio === 'function') {
+    userStartAudio();
+    audioReady = true;
+    return true;
+  }
+  return false;
+}
+
+/* ========== Upload handling ========== */
+function addSamplesFromFiles(files) {
+  for (const f of files) {
+    const url = URL.createObjectURL(f);
+    loadSound(url, snd => {
+      slices.push({ name: f.name, file: url, sound: snd });
+      rebuildWheel();
+    }, e => console.warn('loadSound error', e));
+  }
+}
+
+if (fileInput) {
+  fileInput.addEventListener('change', e => {
+    if (!e.target.files.length) return;
+    ensureAudio();
+    addSamplesFromFiles(e.target.files);
+    e.target.value = '';
+  });
+}
+
+/* ========== p5 core ========== */
+function setup() {
+  // canvas sized to wrapper width (square)
+  const sz = Math.min(820, document.getElementById('roulette-wrap').clientWidth);
+  const c = createCanvas(sz, sz);
+  c.parent('roulette-wrap');
+  wheelSize = min(width, height);
+  cx = width / 2; cy = height / 2;
+
+  pixelDensity(1);
+  textFont('Courier New');
+  angleMode(RADIANS);
+
+  // offscreen buffer for the wheel face
+  pg = createGraphics(wheelSize, wheelSize);
+  pg.angleMode(RADIANS);
+  pg.textAlign(CENTER, CENTER);
+  pg.textFont('Courier New');
+
+  // click anywhere to unlock audio
+  canvas.mousePressed(() => ensureAudio());
+}
+
+function windowResized() {
+  const sz = Math.min(820, document.getElementById('roulette-wrap').clientWidth);
+  resizeCanvas(sz, sz);
+  wheelSize = min(width, height);
+  cx = width / 2; cy = height / 2;
+  pg = createGraphics(wheelSize, wheelSize);
+  pg.angleMode(RADIANS);
+  pg.textAlign(CENTER, CENTER);
+  pg.textFont('Courier New');
+  redrawWheel();
+}
+
+function draw() {
+  clear(); // transparent, so site background shows through
+
+  // spin physics
+  if (spinning) {
+    angle += spinVel;
+    spinVel *= 0.985;                  // damping
+    if (abs(spinVel) < 0.0025) {       // snap to nearest slice
+      spinVel = 0;
+      spinning = false;
+      snapToSlice();
+      celebrate(winIndex);
+      playWinner(winIndex);
     }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:#000;color:var(--ink);font-family:"Courier Prime",monospace}
-    a{color:inherit;text-decoration:none}
+  }
 
-    /* Background layers (same as home) */
-    #bgCanvas{position:fixed;inset:0;z-index:0}
-    .scanlines{position:fixed;inset:0;pointer-events:none;z-index:0;
-      background:repeating-linear-gradient(to bottom,rgba(255,255,255,.02) 0px,rgba(255,255,255,.02) 1px,transparent 2px,transparent 3px)}
-    .vignette{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 40%,rgba(0,0,0,.55) 100%)}
+  // draw wheel
+  push();
+  translate(cx, cy);
+  rotate(angle);
+  imageMode(CENTER);
+  image(pg, 0, 0);
+  pop();
 
-    /* Header */
-    .site-header{position:sticky;top:0;z-index:20;background:rgba(0,0,0,.85);border-bottom:1px solid #191919;backdrop-filter:blur(6px)}
-    .bar{max-width:var(--maxw);margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-    .brand{display:flex;align-items:center;gap:12px}
-    .brand img{height:36px;filter:drop-shadow(0 0 10px rgba(255,255,255,.12))}
-    .brand .name{font-family:Orbitron, sans-serif;letter-spacing:2px;font-size:1rem;animation:glitch 2.2s linear infinite}
-    @keyframes glitch{0%,100%{text-shadow:0 0 12px #fff,2px -2px 0 #f00,-2px 2px 0 #0ff}50%{text-shadow:0 0 12px #fff,-2px 2px 0 #f00,2px -2px 0 #0ff}}
-    nav a{margin-left:10px;padding:6px 10px;border:1px solid #2e2e2e;border-radius:8px}
-    nav a:hover{border-color:#fff;background:#fff;color:#000}
+  // draw confetti
+  for (let i = confetti.length - 1; i >= 0; i--) {
+    const p = confetti[i];
+    p.vy += 0.15;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= 1;
+    noStroke();
+    fill(255, p.life * 2);
+    rect(p.x, p.y, 4, 4);
+    if (p.life <= 0) confetti.splice(i, 1);
+  }
+}
 
-    /* Title */
-    .hero{max-width:var(--maxw);margin:28px auto 8px;padding:0 16px;text-align:center;position:relative;z-index:5}
-    .title{font-family:Orbitron,sans-serif;letter-spacing:3px;font-size:2rem;margin:4px 0 6px;text-shadow:0 0 20px rgba(255,255,255,.08)}
-    .subtitle{color:var(--muted);margin:0}
+/* ========== Wheel building ========== */
+function rebuildWheel() {
+  sliceAngle = TWO_PI / max(1, slices.length || 1);
+  redrawWheel();
+}
 
-    /* Tool wrap */
-    .wrap{max-width:var(--maxw);margin:18px auto 40px;padding:0 16px;position:relative;z-index:5}
-    .panel{background:rgba(15,15,16,.32);border:1px solid rgba(255,255,255,.10);border-radius:14px;backdrop-filter:blur(2px);padding:18px}
+function redrawWheel() {
+  pg.clear();
+  const r = wheelSize * 0.42;
+  const rLabel = r * 0.70;
 
-    .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:14px}
-    .ui, .controls input[type="text"]{
-      background:#111;color:#fff;border:1px solid #fff;border-radius:8px;
-      padding:10px 14px;font:16px/1 "Courier Prime",monospace;cursor:pointer;
-      transition:.15s all ease;box-shadow:0 0 8px rgba(255,255,255,.12) inset}
-    .ui:hover{background:#fff;color:#000}
-    input[type="file"]{display:none}
+  // outer ring
+  pg.noFill();
+  pg.stroke(255);
+  pg.strokeWeight(2);
+  pg.circle(wheelSize / 2, wheelSize / 2, r * 2);
 
-    /* Wheel area frame */
-    #wheel-frame{border:1px solid rgba(255,255,255,.35);border-radius:10px;overflow:hidden;background:transparent}
-    #wheel-canvas{display:block;width:100%}
+  if (!slices.length) return;
 
-    .note{color:#9f9f9f;font-size:.9rem;text-align:center;margin-top:10px}
-    footer{color:#8a8a8a;font-size:.88rem;padding:26px 16px 40px;text-align:center}
-  </style>
-</head>
-<body>
+  for (let i = 0; i < slices.length; i++) {
+    const a0 = i * sliceAngle - HALF_PI;       // start from up (−90°) so pointer on right feels natural
+    const a1 = a0 + sliceAngle;
 
-  <!-- Moving background -->
-  <canvas id="bgCanvas"></canvas>
-  <div class="scanlines"></div>
-  <div class="vignette"></div>
+    // slice fill
+    pg.noStroke();
+    pg.fill(i % 2 ? 30 : 40);
+    pg.arc(wheelSize / 2, wheelSize / 2, r * 2, r * 2, a0, a1, PIE);
 
-  <!-- Header -->
-  <div class="site-header">
-    <div class="bar">
-      <a class="brand" href="/basement-noise/">
-        <img src="/basement-noise/basement_noise_logo_design.png" alt="Basement Noise">
-        <span class="name">Basement Noise</span>
-      </a>
-      <nav>
-        <a href="/basement-noise/">Home</a>
-        <a href="/basement-noise/tools/wheel-decide/">Wheel Decide</a>
-        <a href="/basement-noise/tools/producer-linker/">Producer Linker</a>
-      </nav>
-    </div>
-  </div>
+    // slice divider
+    pg.stroke(90);
+    pg.strokeWeight(1);
+    pg.line(
+      wheelSize / 2 + cos(a0) * r,
+      wheelSize / 2 + sin(a0) * r,
+      wheelSize / 2,
+      wheelSize / 2
+    );
 
-  <!-- Title -->
-  <div class="hero">
-    <h1 class="title">Sample Roulette</h1>
-    <p class="subtitle">Upload samples, spin the wheel, and let the winner play—with a little retro celebration.</p>
-  </div>
+    // label
+    pg.push();
+    pg.translate(wheelSize / 2, wheelSize / 2);
+    const mid = a0 + sliceAngle / 2;
+    pg.rotate(mid);
+    pg.noStroke();
+    pg.fill(200);
+    pg.textSize(12);
+    const label = truncLabel(slices[i].name);
+    pg.text(label, 0, -rLabel);
+    pg.pop();
+  }
 
-  <!-- Tool -->
-  <main class="wrap">
-    <section class="panel">
-      <div class="controls">
-        <label class="ui" for="file-input">Upload Samples</label>
-        <input id="file-input" type="file" multiple accept="audio/*"/>
-        <button id="spin-btn" class="ui">Spin</button>
-        <button id="clear-btn" class="ui">Clear</button>
-      </div>
+  // hub
+  pg.noStroke();
+  pg.fill(0);
+  pg.circle(wheelSize / 2, wheelSize / 2, 40);
+  pg.stroke(255);
+  pg.noFill();
+  pg.circle(wheelSize / 2, wheelSize / 2, 40);
+}
 
-      <div id="wheel-frame">
-        <!-- p5 canvas will mount here -->
-        <div id="canvas-holder"></div>
-      </div>
+function truncLabel(s) {
+  const max = 26;
+  if (s.length <= max) return s;
+  const dot = s.lastIndexOf('.');
+  const base = dot > 0 ? s.slice(0, dot) : s;
+  return base.length > max ? base.slice(0, max - 1) + '…' : base;
+}
 
-      <p class="note">Tip: first click unlocks audio • drag to spin when idle • labels are the file names you upload.</p>
-    </section>
-  </main>
+/* ========== Spin control ========== */
+function spin() {
+  if (!slices.length || spinning) return;
+  ensureAudio();
 
-  <footer>© Basement Noise</footer>
+  // random initial velocity (positive = CW)
+  spinVel = random(0.25, 0.35);
+  spinning = true;
 
-  <script>
-    /* ===== Background (same as home) ===== */
-    (function bg(){
-      const c = document.getElementById('bgCanvas');
-      const ctx = c.getContext('2d', { alpha:false });
-      let w,h,t=0;
-      function resize(){ w=c.width=innerWidth; h=c.height=innerHeight; }
-      addEventListener('resize',resize); resize();
-      function grain(){
-        const img=ctx.getImageData(0,0,w,h), d=img.data;
-        for(let i=0;i<d.length;i+=4){ const n=8+((Math.random()*12)|0); d[i]=d[i+1]=d[i+2]=n; }
-        ctx.putImageData(img,0,0);
-      }
-      function stairs(){
-        ctx.save(); ctx.globalAlpha=.05; ctx.strokeStyle='#fff'; ctx.lineWidth=2;
-        const bx=w*.12+Math.sin(t*.0008)*w*.02, by=h*.25+Math.cos(t*.0006)*h*.02;
-        for(let s=0;s<6;s++) ctx.strokeRect(bx+s*26,by+s*18,120,34);
-        const rx=w*.68+Math.cos(t*.0007)*w*.02, ry=h*.62+Math.sin(t*.0005)*h*.02;
-        for(let s=0;s<6;s++) ctx.strokeRect(rx-s*24,ry-s*16,140,36);
-        ctx.restore();
-      }
-      function loop(now){
-        t=now; ctx.fillStyle='#000'; ctx.fillRect(0,0,w,h); grain(); stairs(); requestAnimationFrame(loop);
-      }
-      requestAnimationFrame(loop);
-    })();
-  </script>
+  // stop anything currently playing
+  if (lastPlayed && lastPlayed.isPlaying()) lastPlayed.stop();
+}
 
-  <script>
-    /* ===== Sample Roulette (p5) ===== */
-    let wheelCanvas;
-    let samples = []; // {name, url, snd}
-    let angle = 0;    // current rotation
-    let angularVel = 0;
-    let spinning = false;
-    let targetAngle = 0;
-    let celebrate = []; // confetti bits
-    let soundReady = false;
+function snapToSlice() {
+  // normalize current facing angle to [0..TWO_PI)
+  // Pointer is on the RIGHT, so “winning” slice is at angle 0 (pointing +X)
+  const facing = ((-angle) % TWO_PI + TWO_PI) % TWO_PI; // convert rotation to wheel space
+  const idx = floor(((facing + HALF_PI) % TWO_PI) / sliceAngle); // compensate our slice start at -HALF_PI
+  winIndex = constrain(idx, 0, slices.length - 1);
 
-    function setup(){
-      const parent = document.getElementById('canvas-holder');
-      const w = Math.min(parent.clientWidth, 900);
-      const h = Math.round(w * 0.75);
-      wheelCanvas = createCanvas(w, h);
-      wheelCanvas.parent('canvas-holder');
-      pixelDensity(1);
-      angleMode(RADIANS);
-      textAlign(CENTER, CENTER);
-      textFont('Courier New');
-      noStroke();
+  // rotate to center the slice exactly at pointer (right side = 0 rad)
+  const sliceMid = winIndex * sliceAngle + sliceAngle / 2 - HALF_PI;
+  angle = -sliceMid; // so that sliceMid ends at +X after rotation
 
-      // UI
-      document.getElementById('file-input').addEventListener('change', handleFiles);
-      document.getElementById('spin-btn').addEventListener('click', spin);
-      document.getElementById('clear-btn').addEventListener('click', clearAll);
-    }
-    function windowResized(){
-      const parent = document.getElementById('canvas-holder');
-      const w = Math.min(parent.clientWidth, 900);
-      const h = Math.round(w * 0.75);
-      resizeCanvas(w, h);
-    }
+  // brief highlight of winner slice by redrawing with bright edge
+  drawWinnerEdge(winIndex);
+}
 
-    function draw(){
-      // Clear canvas (no trails)
-      background(12);
+function drawWinnerEdge(i) {
+  const r = wheelSize * 0.42;
+  const a0 = i * sliceAngle - HALF_PI;
+  const a1 = a0 + sliceAngle;
 
-      // Wheel backdrop
-      push();
-      translate(width/2, height/2);
-      const R = min(width, height) * 0.42;
-      drawWheel(R);
-      drawPointer(R);
-      pop();
+  pg.push();
+  pg.noFill();
+  pg.stroke(255);
+  pg.strokeWeight(3);
+  pg.arc(wheelSize / 2, wheelSize / 2, r * 2 + 4, r * 2 + 4, a0, a1);
+  pg.pop();
+}
 
-      // Winner confetti
-      for (let i=celebrate.length-1; i>=0; i--){
-        celebrate[i].update(); celebrate[i].draw();
-        if (celebrate[i].life <= 0) celebrate.splice(i,1);
-      }
+/* ========== Celebration + audio ========== */
+function celebrate(i) {
+  // pulse ring overlay
+  const ring = document.createElement('div');
+  ring.className = 'win-ring';
+  wrap.appendChild(ring);
+  setTimeout(() => wrap.removeChild(ring), 820);
 
-      // Spin physics
-      if (spinning){
-        angle += angularVel;
-        angularVel *= 0.985; // friction
-        if (abs(angle - targetAngle) < 0.003 && angularVel < 0.02){
-          angle = targetAngle;
-          spinning = false;
-          announceWinner();
-        }
-      }
-    }
+  // confetti burst
+  const n = 70;
+  for (let k = 0; k < n; k++) {
+    confetti.push({
+      x: cx + (k % 2 ? 12 : -12),
+      y: cy,
+      vx: random(-3, 3),
+      vy: random(-6, -2),
+      life: random(40, 70)
+    });
+  }
+}
 
-    /* ---------- Wheel ---------- */
-    function drawWheel(R){
-      const n = max(1, samples.length);
-      const step = TWO_PI / n;
+function playWinner(i) {
+  if (i < 0 || i >= slices.length) return;
+  const snd = slices[i].sound;
+  if (!snd) return;
+  if (lastPlayed && lastPlayed.isPlaying()) lastPlayed.stop();
+  snd.stop();  // ensure we start from 0
+  snd.setVolume(0.9);
+  snd.play();
+  lastPlayed = snd;
+}
 
-      push();
-      rotate(angle);
+/* ========== Controls (wire these to your buttons) ========== */
+window.SR_upload = () => {
+  ensureAudio();
+  const el = document.createElement('input');
+  el.type = 'file'; el.accept = 'audio/*'; el.multiple = true;
+  el.onchange = e => addSamplesFromFiles(e.target.files);
+  el.click();
+};
 
-      for (let i=0;i<n;i++){
-        // slice color
-        const a = i*step;
-        fill(i%2===0 ? color(40) : color(28));
-        stroke(255,60); strokeWeight(1);
-        arc(0,0,R*2,R*2,a,a+step,PIE);
+window.SR_spin = spin;
 
-        // label
-        noStroke();
-        const label = samples[i]?.name || `Slot ${i+1}`;
-        const mid = a + step/2;
-        const tx = cos(mid) * R*0.65;
-        const ty = sin(mid) * R*0.65;
-        push();
-        translate(tx,ty); rotate(mid + HALF_PI);
-        fill(255); textSize(14); text(truncate(label, 18), 0, 0);
-        pop();
-      }
+window.SR_clear = () => {
+  if (lastPlayed && lastPlayed.isPlaying()) lastPlayed.stop();
+  slices.forEach(s => s.sound && s.sound.stop());
+  slices = [];
+  winIndex = -1;
+  angle = 0; spinVel = 0; spinning = false;
+  rebuildWheel();
+};
 
-      // hub + rim
-      noFill(); stroke(255,160); strokeWeight(2);
-      circle(0,0,R*2); // rim
-      noStroke(); fill(0); circle(0,0, R*0.25);
-      pop();
-    }
-
-    function drawPointer(R){
-      // pointer at top
-      push();
-      translate(width/2, height/2 - R - 14);
-      fill(255); stroke(0); strokeWeight(1);
-      beginShape();
-        vertex(-10,0); vertex(10,0); vertex(0,18);
-      endShape(CLOSE);
-      pop();
-    }
-
-    function truncate(s, n){ return s.length>n ? s.slice(0,n-1)+'…' : s; }
-
-    /* ---------- Files & Sound ---------- */
-    function handleFiles(e){
-      const files = Array.from(e.target.files || []);
-      if (!files.length) return;
-
-      if (!soundReady) { tryUnlockAudio(); }
-
-      files.forEach(file=>{
-        const url = URL.createObjectURL(file);
-        loadSound(url, (snd)=>{
-          samples.push({ name: file.name.replace(/\.[^/.]+$/, ''), url, snd });
-        }, (err)=> console.warn('failed to load', file.name, err));
-      });
-    }
-
-    function tryUnlockAudio(){
-      if (typeof userStartAudio === 'function'){
-        userStartAudio();
-        soundReady = true;
-      }
-    }
-
-    /* ---------- Spin ---------- */
-    function spin(){
-      if (spinning || samples.length === 0) return;
-
-      tryUnlockAudio();
-
-      // pick target index
-      const n = samples.length;
-      const idx = floor(random(n));
-      const step = TWO_PI / n;
-      const sliceMid = idx*step + step/2;
-
-      // We want the wheel to stop so that sliceMid is at -PI/2 (top)
-      const baseTarget = -HALF_PI - sliceMid;
-
-      // add full rotations
-      const turns = 5 + floor(random(3)); // 5–7 spins
-      targetAngle = baseTarget + turns*TWO_PI;
-
-      // normalize relative to current angle (smooth shortest path forward)
-      const delta = targetAngle - angle;
-      targetAngle = angle + delta;
-
-      angularVel = 0.45; // starting speed
-      spinning = true;
-
-      // store index for celebration upon stop
-      spin.winningIndex = idx;
-    }
-
-    function announceWinner(){
-      const idx = spin.winningIndex ?? 0;
-      const winner = samples[idx];
-      if (winner?.snd){
-        try { winner.snd.stop(); } catch(e){}
-        winner.snd.setVolume(0.9);
-        winner.snd.play();
-      }
-      spawnConfetti();
-    }
-
-    /* ---------- Confetti ---------- */
-    function spawnConfetti(){
-      const cx = width/2, cy = height/2;
-      for (let i=0;i<120;i++){
-        celebrate.push(new Confetto(cx, cy));
-      }
-    }
-    class Confetto{
-      constructor(x,y){
-        this.x=x; this.y=y;
-        this.vx = random(-3,3);
-        this.vy = random(-5,-1);
-        this.life = 90 + random(60);
-        this.spin = random(-0.2,0.2);
-        this.a = random(TWO_PI);
-        this.size = random(3,6);
-        this.c = color(random([255,180,220]), random([255,220,180]), 255, 220);
-      }
-      update(){
-        this.vy += 0.08; // gravity
-        this.x += this.vx;
-        this.y += this.vy;
-        this.a += this.spin;
-        this.life--;
-      }
-      draw(){
-        push();
-        translate(this.x,this.y); rotate(this.a);
-        noStroke(); fill(this.c);
-        rectMode(CENTER); rect(0,0,this.size*2,this.size);
-        pop();
-      }
-    }
-
-    /* ---------- Clear ---------- */
-    function clearAll(){
-      samples.forEach(s=>{ try { s.snd?.stop(); } catch(e){} });
-      samples = [];
-      spinning = false; angularVel = 0; angle = 0; celebrate = [];
-      const fi = document.getElementById('file-input');
-      if (fi) fi.value = '';
-    }
-
-    /* ---------- Optional drag spin when idle ---------- */
-    let dragStart, startAngle;
-    function mousePressed(){
-      // only if mouse over canvas and not spinning
-      if (spinning) return;
-      const within = mouseX>=0 && mouseX<=width && mouseY>=0 && mouseY<=height;
-      if (!within) return;
-      tryUnlockAudio();
-      dragStart = createVector(mouseX-width/2, mouseY-height/2);
-      startAngle = angle;
-    }
-    function mouseDragged(){
-      if (!dragStart || spinning) return;
-      const v = createVector(mouseX-width/2, mouseY-height/2);
-      angle = startAngle + (atan2(v.y,v.x) - atan2(dragStart.y,dragStart.x));
-    }
-    function mouseReleased(){ dragStart = null; }
-  </script>
-</body>
-</html>
+/* Optional: spin by dragging when idle */
+let prevX = null;
+function mousePressed() {
+  prevX = mouseX;
+}
+function mouseDragged() {
+  if (spinning || !prevX) return;
+  const dx = mouseX - prevX;
+  angle += dx * 0.005;
+  prevX = mouseX;
+}
+function mouseReleased() {
+  prevX = null;
+}
+</script>
