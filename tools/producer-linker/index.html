@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Basement Noise • Producer Linker</title>
 
@@ -9,19 +9,20 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/addons/p5.sound.min.js"></script>
 
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Courier+Prime&display=swap" rel="stylesheet">
 
   <style>
     :root{
-      --bg:#000; --panel:#0f0f10; --ink:#f3f3f3; --muted:#bcbcbc; --frame:#27272a;
+      --bg:#000; --ink:#f3f3f3; --muted:#bcbcbc;
+      --frame:#d9d9d9;          /* light line for the canvas frame */
+      --panel:#0f0f10;          /* very subtle transparent card */
       --maxw:1100px;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:"Courier Prime",monospace}
+    html,body{margin:0;padding:0;background:#000;color:var(--ink);font-family:"Courier Prime",monospace}
     a{color:inherit}
 
-    /* ===== Background layers (IDENTICAL to home) ===== */
+    /* === Global moving background (same as home) === */
     #bgCanvas{ position:fixed; inset:0; z-index:0; }
     .scanlines{ position:fixed; inset:0; pointer-events:none; z-index:0;
       background: repeating-linear-gradient(to bottom,
@@ -30,7 +31,7 @@
     .vignette{ position:fixed; inset:0; z-index:0; pointer-events:none;
       background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%); }
 
-    /* ===== Header (matches home) ===== */
+    /* === Header (matches home) === */
     .site-header{
       position:sticky; top:0; z-index:20;
       background:rgba(0,0,0,.85);
@@ -54,35 +55,45 @@
     nav a{display:inline-block; margin-left:10px; padding:6px 10px; border:1px solid #2e2e2e; border-radius:8px; text-decoration:none}
     nav a:hover{border-color:#fff; background:#fff; color:#000}
 
-    /* ===== Title / Tagline ===== */
+    /* === Title === */
     .hero{ max-width:var(--maxw); margin:28px auto 8px; padding:0 16px; text-align:center; position:relative; z-index:5; }
     .title{ font-family:Orbitron, sans-serif; letter-spacing:3px; font-size:2rem; margin:4px 0 6px; text-shadow:0 0 20px rgba(255,255,255,.08); }
     .subtitle{ color:var(--muted); margin:0; }
 
-    /* ===== Tool container ===== */
+    /* === Tool wrapper (subtle—no heavy shadows) === */
     .wrap{ max-width:var(--maxw); margin:18px auto 40px; padding:0 16px; position:relative; z-index:5; }
     .panel{
-      background:var(--panel); border:1px solid var(--frame); border-radius:16px; padding:18px;
-      box-shadow:0 0 24px rgba(255,255,255,.10);
+      background: rgba(15,15,16,.32);     /* translucent, lets bg show through */
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      backdrop-filter: blur(2px);
+      padding: 18px;
+      /* removed drop shadows for cleaner look */
     }
 
+    /* Controls */
     .controls{
       display:flex; flex-wrap:wrap; gap:10px; justify-content:center;
-      margin:4px 0 16px;
+      margin:4px 0 14px;
     }
     .ui, .controls input[type="text"]{
       background:#111; color:#fff; border:1px solid #fff; border-radius:8px;
       padding:10px 14px; font:16px/1 "Courier Prime",monospace; cursor:pointer;
-      transition:.15s all ease; box-shadow:0 0 8px rgba(255,255,255,.15) inset;
+      transition:.15s all ease; box-shadow:0 0 8px rgba(255,255,255,.12) inset;
     }
     .ui:hover, .controls input[type="text"]:focus{ background:#fff; color:#000; outline:none }
     .controls input[type="file"]{ display:none }
     label.ui{ cursor:pointer }
 
-    #canvas-container{
-      border:2px solid #fff; border-radius:10px; overflow:hidden; background:#0a0a0a;
-      box-shadow:0 0 14px #fff, 0 0 26px #fff;
+    /* Canvas frame — simple line, no glow */
+    #canvas-frame{
+      border:1px solid rgba(255,255,255,.35);
+      border-radius:10px;
+      overflow:hidden;       /* clips the canvas corners */
+      background: transparent;
     }
+    /* the container that holds the p5 canvas element */
+    #canvas-container{ width:100%; height:100%; }
 
     .note{ color:#9f9f9f; font-size:.9rem; text-align:center; margin-top:10px }
     footer{ color:#8a8a8a; font-size:.88rem; padding:26px 16px 40px; text-align:center; position:relative; z-index:5; }
@@ -90,7 +101,7 @@
 </head>
 <body>
 
-  <!-- Background canvas + overlays (IDENTICAL to home) -->
+  <!-- Moving BG -->
   <canvas id="bgCanvas"></canvas>
   <div class="scanlines"></div>
   <div class="vignette"></div>
@@ -113,65 +124,66 @@
   <!-- Title -->
   <div class="hero">
     <h1 class="title">Producer Type Beat Linker</h1>
-    <p class="subtitle">Upload producers, add vibes, and link them with a retro zap.</p>
+    <p class="subtitle">Upload producers, add prompts, and assign them with a retro zap.</p>
   </div>
 
   <!-- Tool -->
   <main class="wrap">
     <section class="panel">
       <div class="controls">
-        <label for="upload-face" class="ui">Upload Producer</label>
+        <label for="upload-face" class="ui" title="Upload a producer image">Upload Producer</label>
         <input type="file" id="upload-face" accept="image/*">
-        <input type="text" id="topic-input" placeholder="Add genre/vibe...">
-        <button id="add-topic" class="ui">Add Vibe</button>
-        <button id="link-button" class="ui">LINK BEAT</button>
-        <button id="reset-button" class="ui">Reset Links</button>
-        <button id="remove-button" class="ui">Remove Last Unlinked</button>
+        <input type="text" id="topic-input" placeholder="Add prompt/genre…">
+        <button id="add-topic" class="ui">Add Prompt</button>
+        <button id="link-button" class="ui">Assign Random</button>
+        <button id="reset-button" class="ui">Clear Links</button>
+        <button id="remove-button" class="ui">Remove Last Free</button>
       </div>
 
-      <div id="canvas-container"></div>
+      <!-- clean frame, no glow -->
+      <div id="canvas-frame">
+        <div id="canvas-container"></div>
+      </div>
 
-      <p class="note">Tip: click a linked vibe to unlink it • drag faces or vibes to rearrange • first click enables sound.</p>
+      <p class="note">Tip: click a linked prompt to unlink it • drag faces or prompts to rearrange • first click enables sound.</p>
     </section>
   </main>
 
   <footer>© Basement Noise</footer>
 
-  <!-- ===== Background animation script (copied from HOME) ===== -->
+  <!-- ========== p5 sketch ========== -->
   <script>
-    const c = document.getElementById('bgCanvas');
-    const ctx = c.getContext('2d', { alpha: false });
-    let w, h, t = 0;
+    /* ===== Moving background (identical to home) ===== */
+    (function(){
+      const c = document.getElementById('bgCanvas');
+      const ctx = c.getContext('2d', { alpha: false });
+      let w,h,t=0;
+      function resize(){ w = c.width = innerWidth; h = c.height = innerHeight; }
+      addEventListener('resize', resize); resize();
 
-    function resize(){ w = c.width = innerWidth; h = c.height = innerHeight; }
-    addEventListener('resize', resize); resize();
-
-    function drawGrain(){
-      const img = ctx.getImageData(0,0,w,h);
-      const d = img.data;
-      for(let i=0;i<d.length;i+=4){
-        const n = 8 + (Math.random()*12)|0;
-        d[i]=d[i+1]=d[i+2]=n; // grayscale speckle
+      function drawGrain(){
+        const img = ctx.getImageData(0,0,w,h), d = img.data;
+        for(let i=0;i<d.length;i+=4){ const n = 8 + (Math.random()*12)|0; d[i]=d[i+1]=d[i+2]=n; }
+        ctx.putImageData(img,0,0);
       }
-      ctx.putImageData(img,0,0);
-    }
-    function drawStairs(){
-      ctx.save(); ctx.globalAlpha=.05; ctx.strokeStyle='#fff'; ctx.lineWidth=2;
-      const steps=6, bx=w*0.12+Math.sin(t*.0008)*w*.02, by=h*0.25+Math.cos(t*.0006)*h*.02;
-      for(let s=0;s<steps;s++){ ctx.strokeRect(bx+s*26, by+s*18, 120, 34); }
-      const rx=w*0.68+Math.cos(t*.0007)*w*.02, ry=h*0.62+Math.sin(t*.0005)*h*.02;
-      for(let s=0;s<steps;s++){ ctx.strokeRect(rx-s*24, ry-s*16, 140, 36); }
-      ctx.restore();
-    }
-    function tick(now){
-      t = now; ctx.fillStyle='#000'; ctx.fillRect(0,0,w,h);
-      drawGrain(); drawStairs(); requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-  </script>
+      function drawStairs(){
+        ctx.save(); ctx.globalAlpha=.05; ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+        const steps=6, bx=w*0.12+Math.sin(t*.0008)*w*.02, by=h*0.25+Math.cos(t*.0006)*h*.02;
+        for(let s=0;s<steps;s++) ctx.strokeRect(bx+s*26, by+s*18, 120, 34);
+        const rx=w*0.68+Math.cos(t*.0007)*w*.02, ry=h*0.62+Math.sin(t*.0005)*h*.02;
+        for(let s=0;s<steps;s++) ctx.strokeRect(rx-s*24, ry-s*16, 140, 36);
+        ctx.restore();
+      }
+      function tick(now){
+        t = now; ctx.fillStyle='#000'; ctx.fillRect(0,0,w,h);
+        drawGrain(); drawStairs(); requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    })();
 
-  <!-- ===== p5.js app (unchanged) ===== -->
-  <script>
+
+    /* ===== Producer Linker (p5) ===== */
+
     // Globals
     let faces = [], topics = [], particles = [], canvas;
     let noise, noiseEnv, osc, oscEnv, oscFail, oscFailEnv;
@@ -180,24 +192,25 @@
     let draggedObject = null, shakeAmount = 0, zaps = [];
     const FACE_SIZE = 80, TOPIC_HEIGHT = 30, PARTICLE_COUNT = 30;
 
+    // Sizing: exact fit of the frame (no black strip)
     function getCanvasSize(){
-      const wrap = document.getElementById('canvas-container');
-      const w = Math.min(wrap.clientWidth, 1000);
-      const h = Math.round(w * 0.6);
-      return {w, h};
+      const frame = document.getElementById('canvas-frame');
+      const w = Math.min(frame.clientWidth, 1000); // keep sane max width
+      const h = Math.round(w * 0.60);
+      return { w, h };
     }
 
     function setup(){
       const {w,h} = getCanvasSize();
       canvas = createCanvas(w, h);
       canvas.parent('canvas-container');
-
+      canvas.elt.style.display = 'block';   // removes inline gap
       pixelDensity(1); frameRate(60);
       textAlign(CENTER, CENTER); textFont('Courier New'); rectMode(CENTER);
 
       document.getElementById('upload-face').addEventListener('change',(e)=>{
         if (e.target.files && e.target.files[0]){
-          let reader = new FileReader();
+          const reader = new FileReader();
           reader.onload = (ev)=> loadImage(ev.target.result, (img)=> faces.push(new Face(img)));
           reader.readAsDataURL(e.target.files[0]);
         }
@@ -216,18 +229,21 @@
     }
 
     function draw(){
+      // FULL CLEAR to prevent ghost trails
+      background(12);
+
+      // optional soft static overlay
+      drawStatic();
+
+      // Shake
       push();
       if (shakeAmount>0){ translate(random(-shakeAmount,shakeAmount), random(-shakeAmount,shakeAmount)); shakeAmount--; }
 
-      drawStatic();
+      // Particles + zaps
+      for(let i=particles.length-1;i>=0;i--){ particles[i].update(); particles[i].display(); if(particles[i].isDead()) particles.splice(i,1); }
+      for(let i=zaps.length-1;i>=0;i--){ drawZap(zaps[i]); zaps[i].life--; if(zaps[i].life<=0) zaps.splice(i,1); }
 
-      for(let i=particles.length-1;i>=0;i--){
-        particles[i].update(); particles[i].display(); if(particles[i].isDead()) particles.splice(i,1);
-      }
-      for(let i=zaps.length-1;i>=0;i--){
-        drawZap(zaps[i]); zaps[i].life--; if(zaps[i].life<=0) zaps.splice(i,1);
-      }
-
+      // Hover state
       let hovering = false;
       for (let i=topics.length-1;i>=0;i--) if (topics[i].checkHover()) hovering = true;
       for (let i=faces.length-1;i>=0;i--) if (!hovering && faces[i].checkHover()) hovering = true;
@@ -238,8 +254,9 @@
 
       for (let f of faces){ f.update(); f.display(); }
       for (let t of topics){ t.update(); t.display(); }
-      drawSpeckles();
+
       pop();
+      drawSpeckles();
     }
 
     // UI actions
@@ -281,7 +298,6 @@
         soundInitialized = true; return true;
       }catch(e){ console.error('sound init fail',e); return false; }
     }
-
     function mousePressed(){
       if (!soundInitialized){ initSound(); return; }
       for (let i=topics.length-1;i>=0;i--){
@@ -297,7 +313,7 @@
 
     // FX
     function drawSpeckles(){ stroke(255,15); strokeWeight(1); for(let i=0;i<300;i++) point(random(width), random(height)); }
-    function drawStatic(){ noStroke(); for(let i=0;i<10;i++){ fill(random(0,50), random(10,30)); rect(random(width), random(height), random(width/2), random(height/10)); } }
+    function drawStatic(){ noStroke(); for(let i=0;i<8;i++){ fill(255, 8); rect(random(width), random(height), random(width/2), random(height/10)); } }
     function drawZap(z){
       push(); let a = map(z.life,0,20,0,255);
       stroke(255,255,0,a); strokeWeight(3+z.life*.2);
@@ -307,6 +323,7 @@
       beginShape(); vertex(z.from.x,z.from.y); vertex(m.x,m.y); vertex(z.to.x,z.to.y); endShape(); pop();
     }
 
+    // Base classes
     class BaseItem{
       constructor(x,y,r){ this.pos=createVector(x,y); this.radius=r; this.isDragging=false; this.dragOffset=createVector(0,0); this.isHovered=false; }
       checkHover(){ if(this.isDragging){ this.isHovered=false; return false; } const d=dist(mouseX,mouseY,this.pos.x,this.pos.y); this.isHovered = d<this.radius; return this.isHovered; }
