@@ -41,7 +41,7 @@
       display:flex; align-items:center; justify-content:space-between; gap:16px;
     }
     .brand{display:flex; align-items:center; gap:12px}
-    .brand img{height:36px; width:auto; filter: drop-shadow(0 0 10px rgba(255,255,255,.12))}
+    .brand img{height:36px; width:auto; filter: drop-shadow(0 0 10px rgba(255,255,255,.12)); background-color: #333; border-radius: 4px;}
     .brand .name{ font-family:Orbitron, sans-serif; letter-spacing:2px; font-size:1rem;
       animation:glitch 2.2s linear infinite; }
     @keyframes glitch{
@@ -85,14 +85,22 @@
   <!-- Header -->
   <div class="site-header">
     <div class="bar">
-      <a class="brand" href="/basement-noise/">
-        <img src="/basement-noise/basement_noise_logo_design.png" alt="Basement Noise"/>
+      <!-- 
+        FIX: Changed href to "#" and img src to a placeholder.
+        The original paths like "/basement-noise/..." will only work
+        if hosted in that specific sub-directory on a server.
+      -->
+      <a class="brand" href="#">
+        <img src="https://placehold.co/100x36/0f0f10/f3f3f3?text=Basement+Noise" 
+             alt="Basement Noise"
+             onerror="this.style.display='none'"/>
         <span class="name">Basement Noise</span>
       </a>
       <nav>
-        <a href="/basement-noise/">Home</a>
-        <a href="/basement-noise/tools/wheel-decide/">Wheel Decide</a>
-        <a href="/basement-noise/tools/producer-linker/">Producer Linker</a>
+        <!-- FIX: Changed hrefs to "#" to prevent 404 errors -->
+        <a href="#">Home</a>
+        <a href="#">Wheel Decide</a>
+        <a href="#">Producer Linker</a>
       </nav>
     </div>
   </div>
@@ -114,7 +122,7 @@
 
       <div id="roulette-wrap">
         <div class="pointer"></div>
-        <canvas id="roulette"></canvas>
+        <!-- p5.js canvas will be injected here by setup() -->
       </div>
 
       <p class="note">Tip: first click unlocks audio • drag to spin when idle • labels are the file names you upload.</p>
@@ -175,6 +183,7 @@
     let lastPlayed = null;
 
     const wrap = document.getElementById('roulette-wrap');
+    let p5canvas; // Reference to the p5.js canvas
 
     function ensureAudio(){
       if (audioReady) return true;
@@ -195,7 +204,14 @@
     // p5
     function setup(){
       const sz = Math.min(820, wrap.clientWidth);
-      const c = createCanvas(sz, sz); c.parent('roulette-wrap');
+      p5canvas = createCanvas(sz, sz); 
+      p5canvas.parent('roulette-wrap');
+      
+      // Move canvas to be the first child, so pointer is on top
+      const canvasEl = p5canvas.elt;
+      canvasEl.id = "roulette"; // Give it the ID the CSS expects
+      wrap.prepend(canvasEl);
+
       wheelSize = min(width, height); cx = width/2; cy = height/2;
 
       pixelDensity(1);
@@ -206,15 +222,21 @@
       pg.angleMode(RADIANS); pg.textAlign(CENTER, CENTER); pg.textFont('Courier New');
 
       // unlock on first click
-      canvas.mousePressed(()=>ensureAudio());
+      p5canvas.mousePressed(()=>ensureAudio());
+
+      // Initial draw
+      rebuildWheel();
     }
 
     function windowResized(){
       const sz = Math.min(820, wrap.clientWidth);
       resizeCanvas(sz, sz);
       wheelSize = min(width, height); cx = width/2; cy = height/2;
+      
+      // Re-create graphics buffer for new size
       pg = createGraphics(wheelSize, wheelSize);
       pg.angleMode(RADIANS); pg.textAlign(CENTER, CENTER); pg.textFont('Courier New');
+      
       redrawWheel();
     }
 
@@ -250,7 +272,10 @@
       }
     }
 
-    function rebuildWheel(){ sliceAngle = TWO_PI / max(1, slices.length || 1); redrawWheel(); }
+    function rebuildWheel(){ 
+      sliceAngle = TWO_PI / max(1, slices.length || 1); 
+      redrawWheel(); 
+    }
 
     function redrawWheel(){
       pg.clear();
@@ -261,7 +286,14 @@
       pg.noFill(); pg.stroke(255); pg.strokeWeight(2);
       pg.circle(wheelSize/2, wheelSize/2, r*2);
 
-      if (!slices.length) return;
+      if (!slices.length) {
+        // Draw placeholder text if no slices
+        pg.push();
+        pg.noStroke(); pg.fill(100); pg.textSize(14);
+        pg.text("Click 'Upload Samples' to begin", wheelSize/2, wheelSize/2);
+        pg.pop();
+        return;
+      }
 
       for (let i=0;i<slices.length;i++){
         const a0 = i*sliceAngle - HALF_PI;    // start at top
@@ -274,9 +306,21 @@
         pg.line(wheelSize/2 + cos(a0)*r, wheelSize/2 + sin(a0)*r, wheelSize/2, wheelSize/2);
 
         // label
-        pg.push(); pg.translate(wheelSize/2, wheelSize/2); const mid = a0 + sliceAngle/2; pg.rotate(mid);
+        pg.push(); 
+        pg.translate(wheelSize/2, wheelSize/2); 
+        const mid = a0 + sliceAngle/2; 
+        pg.rotate(mid);
         pg.noStroke(); pg.fill(200); pg.textSize(12);
-        pg.text(truncLabel(slices[i].name), 0, -rLabel);
+        
+        // Adjust text position based on rotation for readability
+        // (This is a simple fix, better would be to flip text)
+        if (mid > HALF_PI && mid < PI + HALF_PI) {
+            pg.rotate(PI);
+            pg.text(truncLabel(slices[i].name), 0, rLabel); // Flipped
+        } else {
+            pg.text(truncLabel(slices[i].name), 0, -rLabel); // Normal
+        }
+        
         pg.pop();
       }
 
@@ -297,17 +341,21 @@
     function spin(){
       if (!slices.length || spinning) return;
       ensureAudio();
-      spinVel = random(0.25, 0.35);   // initial CW velocity
+      spinVel = random(0.25, 0.35);    // initial CW velocity
       spinning = true;
       if (lastPlayed && lastPlayed.isPlaying()) lastPlayed.stop();
+      // Redraw wheel to clear any previous winner highlights
+      redrawWheel();
     }
 
     function snapToSlice(){
-      // pointer on RIGHT; “facing” angle in wheel space is (-angle)
+      // pointer on RIGHT (0 rad); “facing” angle in wheel space is (-angle)
       const facing = ((-angle) % TWO_PI + TWO_PI) % TWO_PI;
-      const idx = floor(((facing + HALF_PI) % TWO_PI) / sliceAngle); // compensate our top-start
+      // Slices start at -HALF_PI (top). Normalize facing angle to this start.
+      const idx = floor(((facing + HALF_PI) % TWO_PI) / sliceAngle); 
       winIndex = constrain(idx, 0, slices.length-1);
 
+      // Snap to the middle of the winning slice
       const sliceMid = winIndex*sliceAngle + sliceAngle/2 - HALF_PI;
       angle = -sliceMid; // center that slice under pointer (+X)
 
@@ -357,9 +405,35 @@
 
     // Optional drag spin when idle
     let prevX = null;
-    function mousePressed(){ prevX = mouseX; }
-    function mouseDragged(){ if (spinning || !prevX) return; angle += (mouseX - prevX) * 0.005; prevX = mouseX; }
-    function mouseReleased(){ prevX = null; }
+    let dragStartAngle = null;
+    
+    function mousePressed(){ 
+      // Only track presses inside the canvas
+      if (mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+        prevX = mouseX; 
+        dragStartAngle = angle;
+      }
+    }
+    
+    function mouseDragged(){ 
+      if (spinning || prevX === null) return; 
+      
+      let dx = mouseX - prevX;
+      angle += dx * 0.005; // Apply rotation
+      
+      prevX = mouseX; // Update previous X for next frame
+    }
+    
+    function mouseReleased(){ 
+      prevX = null; 
+      
+      // If we weren't spinning and we just dragged, snap to the nearest slice
+      if (!spinning && dragStartAngle !== null && dragStartAngle !== angle) {
+          snapToSlice();
+          playWinner(winIndex);
+      }
+      dragStartAngle = null;
+    }
   </script>
 </body>
 </html>
