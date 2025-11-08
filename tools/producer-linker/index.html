@@ -21,7 +21,23 @@
     html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:"Courier Prime",monospace}
     a{color:inherit}
 
-    /* ===== Header (same system as home) ===== */
+    /* ===== Background layers ===== */
+    #bgfx{
+      position:fixed; inset:0; z-index:0;   /* canvas animation layer */
+      display:block; width:100%; height:100%;
+    }
+    .scanlines{
+      position:fixed; inset:0; pointer-events:none; z-index:1;
+      background: repeating-linear-gradient(to bottom,
+        rgba(255,255,255,.02) 0px, rgba(255,255,255,.02) 1px,
+        transparent 2px, transparent 3px);
+    }
+    .vignette{
+      position:fixed; inset:0; z-index:2; pointer-events:none;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%);
+    }
+
+    /* ===== Header (matches home) ===== */
     .site-header{
       position:sticky; top:0; z-index:20;
       background:rgba(0,0,0,.85);
@@ -36,7 +52,7 @@
     .brand img{height:36px; width:auto; filter: drop-shadow(0 0 10px var(--glow))}
     .brand .name{
       font-family:Orbitron, sans-serif; letter-spacing:2px; font-size:1rem;
-      animation:glitch 2.2s linear infinite;   /* subtle header glitch like home */
+      animation:glitch 2.2s linear infinite;
     }
     @keyframes glitch{
       0%,100%{ text-shadow:0 0 12px #fff, 2px -2px 0 #f00, -2px 2px 0 #0ff }
@@ -45,8 +61,8 @@
     nav a{display:inline-block; margin-left:10px; padding:6px 10px; border:1px solid #2e2e2e; border-radius:8px; text-decoration:none}
     nav a:hover{border-color:#fff; background:#fff; color:#000}
 
-    /* ===== Page Title / Tagline ===== */
-    .hero{ max-width:var(--maxw); margin:28px auto 8px; padding:0 16px; text-align:center; }
+    /* ===== Title / Tagline ===== */
+    .hero{ max-width:var(--maxw); margin:28px auto 8px; padding:0 16px; text-align:center; position:relative; z-index:5; }
     .title{
       font-family:Orbitron, sans-serif; letter-spacing:3px; font-size:2rem; margin:4px 0 6px;
       text-shadow:0 0 20px rgba(255,255,255,.08);
@@ -54,16 +70,16 @@
     .subtitle{ color:var(--muted); margin:0; }
 
     /* ===== Tool container ===== */
-    .wrap{ max-width:var(--maxw); margin:18px auto 40px; padding:0 16px; }
+    .wrap{ max-width:var(--maxw); margin:18px auto 40px; padding:0 16px; position:relative; z-index:5; }
     .panel{
       background:var(--panel); border:1px solid var(--frame); border-radius:16px; padding:18px;
       box-shadow:0 0 24px rgba(255,255,255,.10);
     }
 
-    /* Controls row (centered, tidy) */
+    /* Controls row */
     .controls{
       display:flex; flex-wrap:wrap; gap:10px; justify-content:center;
-      margin: 4px 0 16px;
+      margin:4px 0 16px;
     }
     .ui, .controls input[type="text"]{
       background:#111; color:#fff; border:1px solid #fff; border-radius:8px;
@@ -80,25 +96,16 @@
       box-shadow:0 0 14px #fff, 0 0 26px #fff;
     }
 
-    /* Tips/footnote */
     .note{ color:#9f9f9f; font-size:.9rem; text-align:center; margin-top:10px }
-
-    /* Scanlines + vignette to match home */
-    .scanlines{
-      position:fixed; inset:0; pointer-events:none; z-index:0;
-      background: repeating-linear-gradient(to bottom,
-        rgba(255,255,255,.02) 0px, rgba(255,255,255,.02) 1px,
-        transparent 2px, transparent 3px);
-    }
-    .vignette{
-      position:fixed; inset:0; z-index:0; pointer-events:none;
-      background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%);
-    }
-
-    footer{ color:#8a8a8a; font-size:.88rem; padding:26px 16px 40px; text-align:center }
+    footer{ color:#8a8a8a; font-size:.88rem; padding:26px 16px 40px; text-align:center; position:relative; z-index:5; }
   </style>
 </head>
 <body>
+
+  <!-- Animated background canvas -->
+  <canvas id="bgfx"></canvas>
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
 
   <!-- Header -->
   <div class="site-header">
@@ -142,12 +149,82 @@
 
   <footer>© Basement Noise</footer>
 
-  <div class="scanlines"></div>
-  <div class="vignette"></div>
-
+  <!-- ===== Background animation (matches home vibe) ===== -->
   <script>
-    /* ========= p5 SKETCH (same logic, layout-aware) ========= */
+    (function(){
+      const canvas = document.getElementById('bgfx');
+      const ctx = canvas.getContext('2d', { alpha:false });
 
+      let w=0, h=0, dpi=1;
+      let shapes=[];          // “stairs/blocks”
+      const COL = '#0f0f10';
+      const COL2 = '#141414';
+
+      function resize(){
+        dpi = window.devicePixelRatio || 1;
+        w = canvas.clientWidth = window.innerWidth;
+        h = canvas.clientHeight = window.innerHeight;
+        canvas.width = Math.floor(w * dpi);
+        canvas.height = Math.floor(h * dpi);
+        ctx.setTransform(dpi,0,0,dpi,0,0);
+        spawn();
+      }
+
+      function spawn(){
+        shapes = [];
+        const cols = Math.ceil(w/140);
+        const rows = Math.ceil(h/120)+4;
+        for(let y=0;y<rows;y++){
+          for(let x=0;x<cols;x++){
+            const bw = 120 + Math.random()*40;
+            const bh = 20 + Math.random()*10;
+            const ox = x*140 + (y%2?20:0) + (Math.random()*6-3);
+            const oy = y*90 + (Math.random()*6-3);
+            shapes.push({x:ox, y:oy, w:bw, h:bh, a:0.06+Math.random()*0.05, v:0.12+Math.random()*0.08});
+          }
+        }
+      }
+
+      function grain(){
+        const density = 250; // tiny specks
+        ctx.fillStyle = 'rgba(255,255,255,.015)';
+        for(let i=0;i<density;i++){
+          const gx = Math.random()*w, gy = Math.random()*h;
+          ctx.fillRect(gx, gy, 1, 1);
+        }
+      }
+
+      function tick(t){
+        if (document.hidden){ requestAnimationFrame(tick); return; }
+
+        // subtle gradient base
+        const g = ctx.createLinearGradient(0,0,0,h);
+        g.addColorStop(0,'#000'); g.addColorStop(1,'#050505');
+        ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+
+        // drifting blocks
+        for(const s of shapes){
+          s.y += s.v; if (s.y > h+100) s.y = -120;
+          ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+          ctx.fillRect(s.x, s.y, s.w, s.h);
+
+          // inner darker bar for “step” look
+          ctx.fillStyle = (Math.random()>.5)?COL:COL2;
+          ctx.fillRect(s.x, s.y+s.h-3, s.w, 3);
+        }
+
+        grain();
+        requestAnimationFrame(tick);
+      }
+
+      window.addEventListener('resize', resize);
+      document.addEventListener('visibilitychange', ()=>{/* keep loop but skip heavy draws when hidden */});
+      resize(); requestAnimationFrame(tick);
+    })();
+  </script>
+
+  <!-- ===== App (p5.js) ===== -->
+  <script>
     // Globals
     let faces = [], topics = [], particles = [], canvas;
     let noise, noiseEnv, osc, oscEnv, oscFail, oscFailEnv;
@@ -156,11 +233,10 @@
     let draggedObject = null, shakeAmount = 0, zaps = [];
     const FACE_SIZE = 80, TOPIC_HEIGHT = 30, PARTICLE_COUNT = 30;
 
-    // Responsive sizing based on the panel width
     function getCanvasSize(){
       const wrap = document.getElementById('canvas-container');
       const w = Math.min(wrap.clientWidth, 1000);
-      const h = Math.round(w * 0.6);     // ~16:9 feel
+      const h = Math.round(w * 0.6);
       return {w, h};
     }
 
@@ -284,7 +360,7 @@
       beginShape(); vertex(z.from.x,z.from.y); vertex(m.x,m.y); vertex(z.to.x,z.to.y); endShape(); pop();
     }
 
-    // Base classes
+    // Entities
     class BaseItem{
       constructor(x,y,r){ this.pos=createVector(x,y); this.radius=r; this.isDragging=false; this.dragOffset=createVector(0,0); this.isHovered=false; }
       checkHover(){ if(this.isDragging){ this.isHovered=false; return false; } const d=dist(mouseX,mouseY,this.pos.x,this.pos.y); this.isHovered = d<this.radius; return this.isHovered; }
