@@ -1,108 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Basement Noise • Producer Linker</title>
 
-  <!-- p5.js (same CDN/version) -->
+  <!-- p5.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/addons/p5.sound.min.js"></script>
 
+  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Courier+Prime&display=swap" rel="stylesheet">
 
   <style>
     :root{
       --bg:#000; --panel:#101010; --ink:#f3f3f3; --muted:#bcbcbc; --frame:#2d2d2d; --glow:rgba(255,255,255,.12);
-      --maxw: 1024px;
+      --maxw:1100px;
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:"Courier Prime",monospace}
+    a{color:inherit}
 
-    /* ===== Header ===== */
+    /* ===== Header (same system as home) ===== */
     .site-header{
-      position: sticky; top:0; z-index: 10;
-      background: rgba(0,0,0,.85);
-      border-bottom: 1px solid #191919;
+      position:sticky; top:0; z-index:20;
+      background:rgba(0,0,0,.85);
+      border-bottom:1px solid #191919;
       backdrop-filter: blur(6px);
     }
     .bar{
-      max-width: var(--maxw); margin:0 auto; padding:10px 16px;
-      display:flex; align-items:center; gap:16px; justify-content:space-between;
+      max-width:var(--maxw); margin:0 auto; padding:10px 16px;
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
     }
-    .brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink)}
+    .brand{display:flex; align-items:center; gap:12px; text-decoration:none}
     .brand img{height:36px; width:auto; filter: drop-shadow(0 0 10px var(--glow))}
-    .brand span{font-family:Orbitron, sans-serif; letter-spacing:2px; font-size:1rem}
-
-    nav a{color:var(--ink); text-decoration:none; padding:6px 10px; border:1px solid #333; border-radius:8px; margin-left:8px}
+    .brand .name{
+      font-family:Orbitron, sans-serif; letter-spacing:2px; font-size:1rem;
+      animation:glitch 2.2s linear infinite;   /* subtle header glitch like home */
+    }
+    @keyframes glitch{
+      0%,100%{ text-shadow:0 0 12px #fff, 2px -2px 0 #f00, -2px 2px 0 #0ff }
+      50%    { text-shadow:0 0 12px #fff, -2px 2px 0 #f00, 2px -2px 0 #0ff }
+    }
+    nav a{display:inline-block; margin-left:10px; padding:6px 10px; border:1px solid #2e2e2e; border-radius:8px; text-decoration:none}
     nav a:hover{border-color:#fff; background:#fff; color:#000}
 
     /* ===== Page Title / Tagline ===== */
-    header.page{
-      text-align:center; margin:28px 16px 14px;
-    }
-    .logo-title{
-      font-family:Orbitron, sans-serif; font-size:2rem; letter-spacing:4px; margin:6px 0 4px;
+    .hero{ max-width:var(--maxw); margin:28px auto 8px; padding:0 16px; text-align:center; }
+    .title{
+      font-family:Orbitron, sans-serif; letter-spacing:3px; font-size:2rem; margin:4px 0 6px;
       text-shadow:0 0 20px rgba(255,255,255,.08);
-      animation: titleglitch 2s linear infinite;
     }
-    @keyframes titleglitch{
-      0%,100%{text-shadow:0 0 10px #fff, 2px -2px 0 #f00, -2px 2px 0 #0ff}
-      50%{text-shadow:0 0 10px #fff, -2px 2px 0 #f00, 2px -2px 0 #0ff}
-    }
-    .subtitle{color:var(--muted); margin:0}
+    .subtitle{ color:var(--muted); margin:0; }
 
     /* ===== Tool container ===== */
-    .tool-wrap{
-      max-width: var(--maxw); margin:18px auto 40px; padding:0 16px;
-    }
+    .wrap{ max-width:var(--maxw); margin:18px auto 40px; padding:0 16px; }
     .panel{
-      background: var(--panel);
-      border:1px solid var(--frame);
-      border-radius:16px;
-      box-shadow: 0 0 24px rgba(255,255,255,.10);
-      padding:18px;
+      background:var(--panel); border:1px solid var(--frame); border-radius:16px; padding:18px;
+      box-shadow:0 0 24px rgba(255,255,255,.10);
     }
 
-    /* Controls row */
-    #ui-container{
+    /* Controls row (centered, tidy) */
+    .controls{
       display:flex; flex-wrap:wrap; gap:10px; justify-content:center;
-      margin: 4px 0 14px;
+      margin: 4px 0 16px;
     }
-    .ui-button, input[type="text"]{
+    .ui, .controls input[type="text"]{
       background:#111; color:#fff; border:1px solid #fff; border-radius:8px;
       padding:10px 14px; font: 16px/1 "Courier Prime",monospace; cursor:pointer;
       transition:.15s all ease; box-shadow:0 0 8px rgba(255,255,255,.15) inset;
     }
-    .ui-button:hover, input[type="text"]:focus{background:#fff; color:#000; outline:none}
-    input[type="file"]{display:none}
-    label.ui-button{cursor:pointer}
+    .ui:hover, .controls input[type="text"]:focus{ background:#fff; color:#000; outline:none }
+    .controls input[type="file"]{ display:none }
+    label.ui{ cursor:pointer }
 
     /* Canvas frame */
     #canvas-container{
-      border: 2px solid #fff; border-radius:10px; overflow:hidden;
-      box-shadow: 0 0 14px #fff, 0 0 26px #fff;
-      background:#0a0a0a;
+      border:2px solid #fff; border-radius:10px; overflow:hidden; background:#0a0a0a;
+      box-shadow:0 0 14px #fff, 0 0 26px #fff;
     }
 
-    /* CRT scanline overlay */
+    /* Tips/footnote */
+    .note{ color:#9f9f9f; font-size:.9rem; text-align:center; margin-top:10px }
+
+    /* Scanlines + vignette to match home */
     .scanlines{
       position:fixed; inset:0; pointer-events:none; z-index:0;
       background: repeating-linear-gradient(to bottom,
-        rgba(255,255,255,.02) 0px,
-        rgba(255,255,255,.02) 1px,
+        rgba(255,255,255,.02) 0px, rgba(255,255,255,.02) 1px,
         transparent 2px, transparent 3px);
     }
+    .vignette{
+      position:fixed; inset:0; z-index:0; pointer-events:none;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%);
+    }
+
+    footer{ color:#8a8a8a; font-size:.88rem; padding:26px 16px 40px; text-align:center }
   </style>
 </head>
 <body>
 
-  <!-- Site header (logo + nav back home) -->
+  <!-- Header -->
   <div class="site-header">
     <div class="bar">
       <a class="brand" href="/basement-noise/">
         <img src="/basement-noise/basement_noise_logo_design.png" alt="Basement Noise">
-        <span>Basement Noise</span>
+        <span class="name">Basement Noise</span>
       </a>
       <nav>
         <a href="/basement-noise/">Home</a>
@@ -113,34 +116,37 @@
   </div>
 
   <!-- Page title -->
-  <header class="page">
-    <h1 class="logo-title">Producer Type Beat Linker</h1>
+  <div class="hero">
+    <h1 class="title">Producer Type Beat Linker</h1>
     <p class="subtitle">Upload producers, add vibes, and link them with a retro zap.</p>
-  </header>
+  </div>
 
   <!-- Tool -->
-  <main class="tool-wrap">
+  <main class="wrap">
     <section class="panel">
-      <!-- Controls stay ABOVE the canvas and centered -->
-      <div id="ui-container">
-        <label for="upload-face" class="ui-button">Upload Producer</label>
+      <div class="controls">
+        <label for="upload-face" class="ui">Upload Producer</label>
         <input type="file" id="upload-face" accept="image/*">
         <input type="text" id="topic-input" placeholder="Add genre/vibe...">
-        <button id="add-topic" class="ui-button">Add Vibe</button>
-        <button id="link-button" class="ui-button">LINK BEAT</button>
-        <button id="reset-button" class="ui-button">Reset Links</button>
-        <button id="remove-button" class="ui-button">Remove Last Unlinked</button>
+        <button id="add-topic" class="ui">Add Vibe</button>
+        <button id="link-button" class="ui">LINK BEAT</button>
+        <button id="reset-button" class="ui">Reset Links</button>
+        <button id="remove-button" class="ui">Remove Last Unlinked</button>
       </div>
 
-      <!-- Canvas frame -->
       <div id="canvas-container"></div>
+
+      <p class="note">Tip: click a linked vibe to unlink it • drag faces or vibes to rearrange • first click enables sound.</p>
     </section>
   </main>
 
+  <footer>© Basement Noise</footer>
+
   <div class="scanlines"></div>
+  <div class="vignette"></div>
 
   <script>
-    /* ========= p5 SKETCH (unchanged logic) ========= */
+    /* ========= p5 SKETCH (same logic, layout-aware) ========= */
 
     // Globals
     let faces = [], topics = [], particles = [], canvas;
@@ -153,8 +159,8 @@
     // Responsive sizing based on the panel width
     function getCanvasSize(){
       const wrap = document.getElementById('canvas-container');
-      const w = Math.min(wrap.clientWidth, 1000);      // cap max width
-      const h = Math.round(w * 0.6);                   // 16:9-ish (adjust as you like)
+      const w = Math.min(wrap.clientWidth, 1000);
+      const h = Math.round(w * 0.6);     // ~16:9 feel
       return {w, h};
     }
 
@@ -192,8 +198,12 @@
 
       drawStatic();
 
-      for(let i=particles.length-1;i>=0;i--){ particles[i].update(); particles[i].display(); if(particles[i].isDead()) particles.splice(i,1); }
-      for(let i=zaps.length-1;i>=0;i--){ drawZap(zaps[i]); zaps[i].life--; if(zaps[i].life<=0) zaps.splice(i,1); }
+      for(let i=particles.length-1;i>=0;i--){
+        particles[i].update(); particles[i].display(); if(particles[i].isDead()) particles.splice(i,1);
+      }
+      for(let i=zaps.length-1;i>=0;i--){
+        drawZap(zaps[i]); zaps[i].life--; if(zaps[i].life<=0) zaps.splice(i,1);
+      }
 
       let hovering = false;
       for (let i=topics.length-1;i>=0;i--) if (topics[i].checkHover()) hovering = true;
