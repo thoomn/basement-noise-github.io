@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Basement Noise • Producer Collective</title>
-  <meta name="description" content="Basement Noise is a creative producer collective. We run beat challenges, record & edit content together, and build open-source tools for the community." />
+  <meta name="description" content="Basement Noise is a creative producer collective. We run beat challenges, film the process, edit together, and build open-source tools for the community." />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Courier+Prime&display=swap" rel="stylesheet">
 
   <style>
     :root{
       --bg:#000; --panel:#0f0f10; --ink:#f3f3f3; --muted:#bcbcbc; --frame:#27272a; --maxw:1100px;
-      --accent:#ffffff; /* keep monochrome; hover flips to white */
+      --accent:#ffffff;
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:"Courier Prime",monospace}
@@ -44,20 +44,29 @@
     .cta{border:1px solid var(--accent);border-radius:10px;padding:10px 14px}
     .cta:hover{background:#fff;color:#000}
 
-    /* Pillars / Cards */
+    /* Pillar cards */
     .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:18px}
     .card{background:var(--panel);border:1px solid var(--frame);border-radius:14px;padding:18px;box-shadow:0 0 22px rgba(255,255,255,.07);transition:.18s transform,.18s box-shadow,.18s border-color}
     .card:hover{transform:translateY(-3px);border-color:#fff;box-shadow:0 0 28px rgba(255,255,255,.16)}
     .card h3{margin:0 0 6px;font-family:Orbitron,sans-serif;letter-spacing:2px;font-size:1.05rem}
     .card p{margin:0;color:#b9b9b9}
 
-    /* Two flows */
-    .flows{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
-    .flow{background:#0c0c0c;border:1px solid #222;border-radius:12px;padding:16px}
-    .flow h3{margin:0 0 10px;font-family:Orbitron,sans-serif;letter-spacing:2px}
-    .step{margin:10px 0;padding:10px;border:1px dashed #303030;border-radius:10px}
+    /* Challenge section – chips & format cards */
+    .cycle{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 22px}
+    .badge{
+      background:#0e0e0f;border:1px solid #2d2d2d;border-radius:9999px;
+      padding:10px 14px;box-shadow:0 0 18px rgba(255,255,255,.06);
+      color:#e7e7e7;white-space:nowrap
+    }
+    .badge b{letter-spacing:.5px}
+    .formats{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+    .format{background:#0c0c0c;border:1px solid #222;border-radius:14px;padding:18px}
+    .format h3{margin:0 0 8px;font-family:Orbitron,sans-serif;letter-spacing:2px}
+    .format p{margin:0 0 12px;color:#b9b9b9}
+    .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+    .tag{border:1px dashed #2f2f2f;border-radius:9999px;padding:6px 10px;color:#cfcfcf}
 
-    /* Tool cards */
+    /* Tools */
     .tool-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
     .tool .go{display:inline-block;margin-top:10px;border:1px solid #fff;border-radius:8px;padding:8px 12px}
     .tool .go:hover{background:#fff;color:#000}
@@ -99,14 +108,14 @@
     <div class="cta-row">
       <a class="cta" href="#challenges" aria-label="Jump to challenges">🎥 Join a Beat Challenge</a>
       <a class="cta" href="#tools" aria-label="Jump to tools">🎛 Explore Producer Tools</a>
-      <a class="cta" href="https://discord.gg/" target="_blank" rel="noreferrer">🎧 Join the Discord</a>
+      <a class="cta" href="https://discord.gg/sWX6xbdgVv" target="_blank" rel="noreferrer">🎧 Join the Discord</a>
     </div>
 
     <!-- Pillars -->
     <div class="cards" style="margin-top:20px">
       <div class="card">
         <h3>🎡 Challenges</h3>
-        <p>Two a month. Quick prompts, hard timers, real reactions. Everyone records their process so we can cut highlights for socials.</p>
+        <p>Two a month. Quick prompts, hard timers, real reactions. Everyone records the process so we can cut highlights for socials.</p>
       </div>
       <div class="card">
         <h3>🎬 Content</h3>
@@ -124,33 +133,59 @@
     <div class="wrap">
       <h2 class="sec">About the Collective</h2>
       <p class="lead">
-        We’re a small crew of producers documenting the way we actually create—quick decisions, happy accidents, and first-listen reactions.
-        The goal is simple: make better music together, build helpful tools, and amplify everyone’s online presence.
+        We’re a small crew of producers documenting the way we actually create—quick decisions,
+        happy accidents, and first-listen reactions. The goal is simple: make better music together,
+        build helpful tools, and amplify everyone’s online presence.
       </p>
     </div>
   </section>
 
-  <!-- How it works -->
+  <!-- Challenges (chips + formats) -->
   <section id="challenges" class="section">
     <div class="wrap">
       <h2 class="sec">How Our Challenges Work</h2>
-      <div class="flows">
-        <div class="flow">
-          <h3>🎲 General Flow</h3>
-          <div class="step"><b>1) Prompt</b> — Draw a rule, genre, or sample (wheel or linker).</div>
-          <div class="step"><b>2) Build</b> — ~30 minute timer. Drums, bass, hook—don’t overthink.</div>
-          <div class="step"><b>3) Capture</b> — Screen + camera on; keep the first takes honest.</div>
-          <div class="step"><b>4) React</b> — First-listen reactions, then pick moments for edits.</div>
-          <p style="color:#9c9c9c;margin:8px 0 0">Cadence: <b>two challenges per month</b>. Pitch ideas in <b>#couch</b>.</p>
-        </div>
+      <p class="lead">
+        Twice a month we run fast, on-camera beat challenges. The point is to capture real creativity—bold choices,
+        honest reactions—and turn it into content that grows everyone’s audience.
+      </p>
 
-        <div class="flow">
-          <h3>🧠 Producer Linker</h3>
-          <div class="step"><b>1) Add Producers</b> — Drop faces for each person (private to the session).</div>
-          <div class="step"><b>2) Add Vibes</b> — Write prompts like “Spanish type beat,” “Tape-warped pads.”</div>
-          <div class="step"><b>3) Link</b> — Hit LINK to assign prompts with a zap.</div>
-          <div class="step"><b>4) Cook + React</b> — Build fast; capture the chaos.</div>
+      <div class="cycle" aria-label="Challenge cycle">
+        <span class="badge">🎲 <b>Prompt Draw</b> — wheel / theme / rule</span>
+        <span class="badge">🧪 <b>Build Fast</b> — ~30 min timer</span>
+        <span class="badge">📹 <b>Capture</b> — screen + camera</span>
+        <span class="badge">🎧 <b>First-Listen Reactions</b></span>
+        <span class="badge">✂️ <b>Edit Highlights</b> — shorts & reels</span>
+        <span class="badge">📡 <b>Double Upload</b> — you + Basement Noise</span>
+      </div>
+
+      <h3 class="sec" style="font-size:1.05rem;margin-top:18px">Challenge Formats</h3>
+      <div class="formats">
+        <div class="format">
+          <h3>🎡 Sample Roulette</h3>
+          <p>Spin for random source material or constraints, flip it quick, and let the timer force the groove.</p>
+          <div class="meta">
+            <span class="tag">randomizer</span><span class="tag">sampling</span><span class="tag">pressure-cook</span>
+          </div>
         </div>
+        <div class="format">
+          <h3>🧠 Type Beat</h3>
+          <p>Pull a vibe or artist lane, then build your interpretation—sound design first, arrangement second.</p>
+          <div class="meta">
+            <span class="tag">genre prompt</span><span class="tag">sound design</span><span class="tag">arrangement</span>
+          </div>
+        </div>
+        <div class="format">
+          <h3>🧩 Community Picks</h3>
+          <p>Pitch ideas in <b>#couch</b>. We test wild formats, new rules, and experimental tools the crew suggests.</p>
+          <div class="meta">
+            <span class="tag">community-driven</span><span class="tag">experimental</span><span class="tag">open source</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cta-row" style="margin-top:14px">
+        <a class="cta" href="https://discord.gg/sWX6xbdgVv" target="_blank" rel="noreferrer">🎧 Join the Discord</a>
+        <a class="cta" href="#tools">🎛 Explore the Tools</a>
       </div>
     </div>
   </section>
@@ -163,12 +198,12 @@
       <div class="tool-grid">
         <div class="card tool">
           <h3>🎛 Wheel Decide</h3>
-          <p>Spin for random samples, genres, or constraints. Great for warm-ups and challenge videos.</p>
+          <p>Spin for random samples, genres, or constraints. Perfect for warm-ups and challenge videos.</p>
           <a class="go" href="/basement-noise/tools/wheel-decide/">Open Wheel Decide</a>
         </div>
         <div class="card tool">
           <h3>🧠 Producer Linker</h3>
-          <p>Upload faces, add vibes, and link ideas in a glitchy retro interface—perfect for team prompts.</p>
+          <p>Upload faces, add vibes, and link ideas in a glitchy retro interface—great for team prompts.</p>
           <a class="go" href="/basement-noise/tools/producer-linker/">Open Producer Linker</a>
         </div>
         <div class="card tool">
@@ -184,9 +219,9 @@
   <section id="join" class="section">
     <div class="wrap">
       <h2 class="sec">Join the Collective</h2>
-      <p class="lead">Jump in, make noise, and help us build. Pick a lane—challenge, content, or code.</p>
+      <p class="lead">Pick a lane—challenge, content, or code—and help us build.</p>
       <div class="cta-row" style="margin-top:10px">
-        <a class="cta" href="https://discord.gg/" target="_blank" rel="noreferrer">🎧 Join Discord</a>
+        <a class="cta" href="https://discord.gg/sWX6xbdgVv" target="_blank" rel="noreferrer">🎧 Join Discord</a>
         <a class="cta" href="https://www.instagram.com/basementnoisecollective/" target="_blank" rel="noreferrer">📸 Instagram</a>
         <a class="cta" href="https://www.tiktok.com/@basement.noise" target="_blank" rel="noreferrer">🎵 TikTok</a>
         <a class="cta" href="https://www.youtube.com/@basementnoise" target="_blank" rel="noreferrer">▶️ YouTube</a>
