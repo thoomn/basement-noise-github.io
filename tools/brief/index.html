@@ -1,374 +1,621 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  />
-  <title>Basement Noise • Basement Brief</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BASEMENT // CLASSIC</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
-  <!-- Type -->
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@400;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+        :root {
+            --bg: #050505;
+            --fg: #e0e0e0;       /* Main Text: White */
+            --dim: #444;         /* Borders/Labels: Grey */
+            --accent: #00ff41;   /* Highlight: Terminal Green */
+            --err: #ff3333;
+            --font: 'Share Tech Mono', monospace;
+        }
 
-  <style>
-    :root{
-      --bg:#050505;          /* page background */
-      --ink:#e0e0e0;         /* primary text */
-      --muted:#888;          /* secondary text */
-      --dim:#444;            /* low-contrast strokes */
-      --frame:#333;          /* card borders */
-      --maxw:1100px;         /* site width */
-      --font-head:'Inter',sans-serif;
-      --font-mono:'Space Mono',monospace;
-    }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+        body {
+            background-color: var(--bg); color: var(--fg); font-family: var(--font);
+            min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 1rem; overflow: hidden;
+        }
 
-    /* Keep space for sticky header so content never hides beneath it */
-    body{background:var(--bg);color:var(--ink);font-family:var(--font-mono);min-height:100dvh;padding-top:56px;overflow-x:hidden}
+        /* --- CRT TEXTURE --- */
+        body::before {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 999;
+        }
+        body::after {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.6) 100%);
+            pointer-events: none; z-index: 1000;
+        }
 
-    /* Subtle grid + noise (BN vibe) */
-    body::before{
-      content:"";position:fixed;inset:0;pointer-events:none;z-index:-2;
-      background-image:
-        linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),
-        linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
-      background-size:20px 20px;
-    }
-    body::after{
-      content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
-      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
-    }
+        /* --- BOOT OVERLAY --- */
+        #startup-overlay {
+            position: fixed; inset: 0; background: var(--bg); z-index: 2000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+        
+        #boot-log {
+            font-size: 0.7rem; color: var(--dim); width: 300px; height: 120px; 
+            text-align: left; display: none; flex-direction: column; justify-content: flex-end;
+            margin-bottom: 20px; border-left: 2px solid var(--dim); padding-left: 10px;
+        }
+        .log-success { color: var(--accent); } /* Green for "OK" */
 
-    /* ===== Shared BN header (matches home & other tools) ===== */
-    .site-header{
-      position:sticky;top:0;z-index:30;
-      background:rgba(0,0,0,.85);
-      border-bottom:1px solid #191919;
-      backdrop-filter:blur(6px);
-    }
-    .site-header .bar{
-      max-width:var(--maxw);margin:0 auto;padding:10px 16px;
-      display:flex;align-items:center;justify-content:space-between;gap:16px;
-    }
-    .site-header .brand{display:flex;align-items:center;gap:12px;color:var(--ink);text-decoration:none}
-    .site-header .brand img{height:36px;width:auto;filter:drop-shadow(0 0 10px rgba(255,255,255,.12))}
-    .site-header .brand .name{
-      font-family:Orbitron, sans-serif;letter-spacing:2px;font-size:1rem;
-      animation:glitch 2.2s linear infinite;
-    }
-    @keyframes glitch{
-      0%,100%{text-shadow:0 0 12px #fff, 2px -2px 0 #f00, -2px 2px 0 #0ff}
-      50%{text-shadow:0 0 12px #fff, -2px 2px 0 #f00, 2px -2px 0 #0ff}
-    }
-    .site-header nav a{
-      color:var(--ink);text-decoration:none;border:1px solid #2e2e2e;border-radius:8px;
-      padding:6px 10px;margin-left:10px;transition:.15s;
-    }
-    .site-header nav a:hover{border-color:#fff;background:#fff;color:#000}
+        #btn-init {
+            background: transparent; border: 1px solid var(--fg); color: var(--fg);
+            padding: 1.5rem 3rem; font-family: var(--font); font-size: 1.2rem; cursor: pointer;
+            text-transform: uppercase; box-shadow: 0 0 15px var(--dim); transition: 0.2s;
+        }
+        #btn-init:hover { background: var(--fg); color: var(--bg); box-shadow: 0 0 30px var(--fg); }
 
-    /* ===== Connect overlay ===== */
-    #overlay{
-      position:fixed;inset:0;background:#000;z-index:5;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      transition:opacity .4s ease;
-    }
-    #overlay h1{font-family:var(--font-head);font-weight:900;letter-spacing:-2px;margin-bottom:1rem}
-    #overlay p{font-size:.6rem;color:#777;margin-bottom:2rem;letter-spacing:2px}
-    #btn-init{border:1px solid var(--ink);color:var(--ink);padding:1rem 2rem;font-weight:700;background:transparent;cursor:pointer}
-    #btn-init:hover{background:#fff;color:#000}
+        /* --- MAIN UI --- */
+        #app-container { 
+            width: 100%; max-width: 550px; opacity: 0; transition: opacity 1s; z-index: 10;
+            border: 1px solid var(--dim); padding: 2px; position: relative;
+            background: rgba(10, 10, 10, 0.5);
+        }
+        #app-container.visible { opacity: 1; }
+        
+        /* Corner markers */
+        #app-container::before { content:"+"; position:absolute; top:-5px; left:-5px; color:var(--fg); }
+        #app-container::after { content:"+"; position:absolute; bottom:-5px; right:-5px; color:var(--fg); }
 
-    /* ===== Card/App ===== */
-    #app{
-      width:100%;max-width:640px;margin:0 auto;opacity:0;
-      background:rgba(5,5,5,.85);backdrop-filter:blur(10px);
-      border:1px solid var(--frame);border-radius:12px;overflow:hidden;
-      box-shadow:0 0 22px rgba(255,255,255,.07);
-      transition:opacity .35s ease, transform .35s ease;
-      transform:translateY(8px);
-    }
-    #app.visible{opacity:1;transform:translateY(0)}
+        header { 
+            padding: 1.5rem; border-bottom: 1px solid var(--dim); 
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        h1 { font-size: 2rem; margin: 0; letter-spacing: 4px; color: var(--fg); text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        .meta { font-size: 0.6rem; color: var(--dim); text-align: right; }
+        .status-dot { display: inline-block; width: 8px; height: 8px; background: var(--dim); border-radius: 50%; margin-right: 5px; }
+        .status-dot.active { background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: pulse 1s infinite; }
 
-    header.card{
-      padding:18px 18px 12px;border-bottom:1px solid var(--frame);
-      display:flex;justify-content:space-between;align-items:baseline
-    }
-    header.card h1{font-family:var(--font-head);font-weight:900;font-size:1.6rem;letter-spacing:-2px}
-    .meta{font-size:.62rem;color:#9a9a9a;text-transform:uppercase;letter-spacing:1px;text-align:right}
+        @keyframes pulse { 0% { opacity: 0.5; } 100% { opacity: 1; } }
 
-    .cell{
-      display:grid;grid-template-columns:1fr auto;align-items:center;
-      padding:12px 18px;border-bottom:1px solid var(--frame)
-    }
-    .cell:last-child{border-bottom:none}
-    .info{display:flex;flex-direction:column}
-    .label{font-size:.6rem;color:#9a9a9a;letter-spacing:1px}
-    .value{
-      font-family:var(--font-head);font-weight:800;font-size:1.25rem;letter-spacing:-.5px;
-      text-transform:uppercase;color:var(--ink);line-height:1;min-height:1.25rem;transition:color .1s
-    }
-    .value.scrambling{color:#777}
+        /* --- GRID --- */
+        .grid { padding: 0 1.5rem; }
+        .row {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px dashed var(--dim); padding: 1rem 0;
+        }
+        .label { font-size: 0.7rem; color: var(--dim); font-weight: bold; letter-spacing: 1px;}
+        .value { 
+            font-size: 1.1rem; color: var(--fg); font-weight: bold; text-align: right; max-width: 70%; 
+        }
+        .value.scrambling { color: var(--dim); text-shadow: none; }
 
-    button{font-family:var(--font-mono);cursor:pointer}
-    .btn-lock{border:1px solid var(--dim);color:#bdbdbd;background:transparent;font-size:.62rem;padding:5px 8px}
-    .btn-lock:hover{border-color:#fff;color:#fff}
-    .btn-lock.locked{color:#fff;border-color:#fff}
+        /* --- AUDIO PANEL --- */
+        #audio-panel {
+            margin: 1rem 0; border: 1px solid var(--dim); padding: 1rem;
+            background: rgba(0, 0, 0, 0.3); position: relative;
+            transition: border-color 0.3s;
+        }
+        #audio-panel.active { border-color: var(--accent); }
 
-    .btn-main{
-      display:block;width:calc(100% - 36px);margin:14px auto 18px;padding:16px;
-      background:#fff;color:#000;border:none;border-radius:8px;font-family:var(--font-head);font-weight:900;letter-spacing:1px
-    }
-    .btn-main:disabled{opacity:.6;cursor:not-allowed}
+        #patch-name { font-size: 0.6rem; color: var(--dim); margin-bottom: 10px; display: block; }
+        
+        .scope-wrap { position: relative; width: 100%; height: 60px; margin-bottom: 10px; border: 1px solid #222; background: #000; }
+        canvas { width: 100%; height: 100%; }
+        
+        .meters { position: absolute; right: 0; top: 0; height: 100%; display: flex; width: 6px; }
+        .meter-bar { width: 3px; background: var(--accent); height: 0%; align-self: flex-end; transition: height 0.05s; }
+        .meter-bar.clip { background: var(--err); }
 
-    #sys-log{
-      font-size:.62rem;color:#9a9a9a;padding:10px 18px;border-top:1px solid var(--frame);
-      display:flex;justify-content:space-between;align-items:center;gap:12px
-    }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button.ctrl-btn {
+            background: transparent; border: 1px solid var(--dim); color: var(--dim);
+            padding: 10px; font-family: var(--font); font-size: 0.8rem; cursor: pointer; transition: 0.2s;
+        }
+        button.ctrl-btn:hover { border-color: var(--fg); color: var(--fg); }
+        button.ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--dim); color: var(--dim); }
+        button.ctrl-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
 
-    /* Barcode row (responsive, full width) */
-    #barcode{
-      width:100%;height:18px;display:flex;gap:2px;margin:8px 0 2px;opacity:.75;overflow:hidden;padding:0 18px
-    }
-    .bar{background:var(--ink);height:100%}
-  </style>
+        /* --- MAIN GENERATE --- */
+        #gen-btn {
+            width: 100%; background: var(--fg); color: #000; border: none;
+            padding: 1.5rem; font-family: var(--font); font-size: 1.2rem; font-weight: bold;
+            cursor: pointer; letter-spacing: 2px;
+        }
+        #gen-btn:hover { background: var(--white); box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+        #gen-btn:disabled { background: var(--dim); color: #000; cursor: wait; box-shadow: none; }
+
+        /* --- LOCKS --- */
+        .lock { background: none; border: none; color: var(--dim); font-size: 0.7rem; cursor: pointer; padding: 5px; }
+        .lock:hover { color: var(--fg); }
+        .lock.locked { color: var(--accent); text-shadow: 0 0 8px var(--accent); font-weight: bold; }
+
+        .btn-info { border: none; padding: 0 5px; font-size: 0.6rem; margin-left: 5px; color: var(--dim); cursor: help; background: transparent; }
+        .btn-info:hover { color: var(--accent); }
+
+        /* --- FOOTER --- */
+        #footer { padding: 1rem; border-top: 1px solid var(--dim); display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--dim); }
+        #barcode { display: flex; gap: 2px; height: 15px; opacity: 0.3; }
+        .bar { background: var(--fg); height: 100%; }
+
+        /* --- MODAL --- */
+        #modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 3000;
+            display: none; align-items: center; justify-content: center; padding: 2rem;
+        }
+        #modal-overlay.visible { display: flex; }
+        .modal-content { border: 1px solid var(--fg); padding: 2rem; background: #050505; max-width: 400px; width: 100%; box-shadow: 0 0 30px rgba(255,255,255,0.1); }
+        
+        .hidden { display: none !important; }
+
+    </style>
 </head>
 <body>
 
-  <!-- Shared BN Header -->
-  <div class="site-header">
-    <div class="bar">
-      <a class="brand" href="/basement-noise/">
-        <img src="/basement-noise/basement_noise_logo_design.png" alt="Basement Noise">
-        <span class="name">Basement Noise</span>
-      </a>
-      <nav>
-        <a href="/basement-noise/">Home</a>
-        <a href="/basement-noise/tools/wheel-decide/">Wheel Decide</a>
-        <a href="/basement-noise/tools/producer-linker/">Producer Linker</a>
-        <a href="/basement-noise/tools/basement-brief/">Basement Brief</a>
-      </nav>
-    </div>
-  </div>
-
-  <!-- Connect overlay -->
-  <div id="overlay">
-    <h1>BASEMENT</h1>
-    <p>// DATA_CORE //</p>
-    <button id="btn-init">[ CONNECT ]</button>
-  </div>
-
-  <!-- App card -->
-  <div id="app">
-    <header class="card">
-      <h1>BRIEF_V107</h1>
-      <div class="meta">
-        <span id="session-id">ID: -----</span><br/>
-        <span>ONLINE</span>
-      </div>
-    </header>
-
-    <div class="cell">
-      <div class="info">
-        <span class="label">01 GENRE</span>
-        <span class="value" id="out-g">---</span>
-      </div>
-      <button class="btn-lock" data-id="g">LOCK</button>
+    <div id="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modal-title" style="color:var(--accent); margin-bottom:1rem; border-bottom:1px solid var(--dim); padding-bottom:0.5rem;">DIRECTIVE</h2>
+            <p id="modal-desc" style="color:var(--fg); font-size:0.85rem; line-height:1.6; margin-bottom:2rem; opacity: 0.9;">...</p>
+            <button onclick="closeModal()" style="width:100%; border:1px solid var(--fg); background: transparent; color:var(--fg); padding:1rem; cursor: pointer; font-family: var(--font);">ACKNOWLEDGE</button>
+        </div>
     </div>
 
-    <div class="cell">
-      <div class="info">
-        <span class="label">02 KEY / SCALE</span>
-        <span class="value" id="out-k">---</span>
-      </div>
-      <button class="btn-lock" data-id="k">LOCK</button>
+    <!-- BOOT SCREEN -->
+    <div id="startup-overlay">
+        <div id="init-ui" style="text-align: center;">
+            <h1 style="margin-bottom: 1rem;">BASEMENT</h1>
+            <p style="font-size: 0.6rem; color: var(--dim); margin-bottom: 3rem;">// CONNECTION_THROUGH_SOUND //</p>
+            <button id="btn-init">[ INITIATE SYSTEM ]</button>
+        </div>
+        <div id="boot-log"></div>
     </div>
 
-    <div class="cell">
-      <div class="info">
-        <span class="label">03 TEMPO</span>
-        <span class="value" id="out-t">---</span>
-      </div>
-      <button class="btn-lock" data-id="t">LOCK</button>
-    </div>
+    <!-- APP -->
+    <div id="app-container">
+        <header>
+            <h1>BASEMENT</h1>
+            <div class="meta">
+                <div style="display:flex; align-items:center; justify-content:flex-end; gap:5px;">
+                    <span id="status-light" class="status-dot"></span> ONLINE
+                </div>
+                <span id="session-id">ID: 00000</span>
+            </div>
+        </header>
 
-    <div class="cell">
-      <div class="info">
-        <span class="label">04 STRUCTURE</span>
-        <span class="value" id="out-s">---</span>
-      </div>
-      <button class="btn-lock" data-id="s">LOCK</button>
-    </div>
+        <div class="grid">
+            <div class="row"><span class="label">01 GENRE</span><span class="value" id="out-g">---</span><button class="lock" data-id="g">LOCK</button></div>
+            <div class="row"><span class="label">02 KEY</span><span class="value" id="out-k">---</span><button class="lock" data-id="k">LOCK</button></div>
+            <div class="row"><span class="label">03 TEMPO</span><span class="value" id="out-t">---</span><button class="lock" data-id="t">LOCK</button></div>
+            <div class="row"><span class="label">04 STRUCTURE</span><span class="value" id="out-s">---</span><button class="lock" data-id="s">LOCK</button></div>
+            
+            <!-- AUDIO -->
+            <div id="audio-panel">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span class="label">05 ARTIFACT (TEXTURE + DRUMS)</span>
+                    <span class="label" id="audio-status" style="color:var(--dim)">STANDBY</span>
+                </div>
+                <span id="patch-name">SYSTEM READY</span>
+                <div class="scope-wrap">
+                    <canvas id="visualizer"></canvas>
+                    <div class="meters">
+                        <div class="meter-bar" id="meter-l"></div>
+                        <div class="meter-bar" id="meter-r" style="left: 3px;"></div>
+                    </div>
+                </div>
 
-    <div class="cell" style="border-bottom:none">
-      <div class="info">
-        <span class="label">05 LIMITATION</span>
-        <span class="value" id="out-w">---</span>
-      </div>
-      <button class="btn-lock" data-id="w">LOCK</button>
-    </div>
+                <div class="controls">
+                    <button id="btn-play" class="ctrl-btn" disabled>PLAY LOOP</button>
+                    <button id="btn-dl" class="ctrl-btn" disabled>SAVE .WAV</button>
+                </div>
+            </div>
 
-    <div id="sys-log">
-      <span id="batch-no">BATCH: -----</span>
-      <span id="combo-count">CALCULATING…</span>
-    </div>
-    <div id="barcode"></div>
+            <div class="row" style="border:none; margin-top:10px;">
+                <div style="display:flex; align-items:center;">
+                    <span class="label">06 DIRECTIVE</span>
+                    <button class="btn-info" onclick="showInfo()">[?]</button>
+                </div>
+                <span class="value" id="out-w">---</span>
+                <button class="lock" data-id="w">LOCK</button>
+            </div>
+        </div>
 
-    <button id="btn-gen" class="btn-main">GENERATE</button>
-  </div>
+        <div id="footer">
+            <div id="barcode"></div>
+            <span id="combo-count">CALCULATING...</span>
+        </div>
+
+        <button id="gen-btn">GENERATE</button>
+    </div>
 
 <script>
-/* =========================
-   DATA
-========================= */
+// --- DATA ---
 const DB = {
-  g: [
-    "Lofi HipHop","UK Drill","Dark Trap","Industrial Techno","Acid House","Boom Bap","Ambient","Phonk","Synthwave","Glitch Hop",
-    "Hardcore","IDM","Jungle","Drum & Bass","Grime","Dungeon Synth","Gabber","Math Rock","Neo-Soul","Dubstep (Old School)",
-    "Hyperpop","Chicago Footwork","Jersey Club","Baltimore Club","Barber Beats","Vaporwave","Future Bass","Riddim","Midwest Emo",
-    "Shoegaze","Nu-Metal","Post-Punk","G-Funk","Cloud Rap","Memphis Phonk","Electro","Breakcore","Neurofunk","Tech House","Minimal",
-    "Trap Metal","Witch House","Ambient Techno","Jazz Rap","Trip Hop","Dub Techno","Electroclash","Deconstructed Club","Leftfield Bass"
-  ],
-  k: [
-    "A Minor","C Minor","F# Minor","E Minor","D Minor","G Minor","Bb Minor","F Minor","C# Minor","Eb Major","G Major","F Major",
-    "No Key (Atonal)","B Phrygian","D Dorian","C Lydian","F# Locrian","G Mixolydian","A Harmonic Minor","E Melodic Minor",
-    "Whole Tone","Pentatonic Minor","Pentatonic Major","Hirajoshi (Jp)","Hungarian Minor","Byzantine","Lydian Dominant","Super Locrian","Diminished"
-  ],
-  t: [
-    "70-90 BPM","120-130 BPM","140 BPM","85 BPM","170+ BPM","110 BPM","Free Tempo","160 BPM","100 BPM",
-    "60 BPM (Sludge)","95 BPM","135 BPM","150 BPM","Ramp (80->120)","Ultra-Slow (40-60)","115 BPM","145 BPM","155 BPM"
-  ],
-  s: [
-    "Intro-A-B-A-Outro","No Intro, Chorus First","Build -> Drop","Loop Based","One Long Take","A-B-C-D","Chorus 1st",
-    "Fade In/Fade Out","Minimal (Subtraction)","30 Sec Loop Only","Start w/ Acapella","False Ending","Through Composed",
-    "Verse-Chorus-Verse-Bridge-Chorus","Percussion Only Intro"
-  ],
-  w: [
-    "NO PRESETS","MONOPHONIC","NO HI-HATS","VOICE ONLY","REVERSE AUDIO","10 MIN LIMIT","ONE SYNTH","NO SNARE",
-    "RESAMPLE 3X","NO GRID","SILENCE (4 Bars)","5 MIN SOUND DESIGN","NO KICK","ONE SAMPLE ONLY","BITCRUSHED (All)","MONO MIX",
-    "NO QUANTIZE","BASS LEAD","100% WET (Master)","SINE WAVES ONLY","HARD PAN (L/C/R)","NO 3RD PARTY PLUGINS","SAMPLE ROULETTE (3x)",
-    "No Drums (Synth Perc)","Foley Only","No Reverb","Sidechain Everything","No Compression","Make a 3/4 Time Beat",
-    "No Automation","Hardware Only","Use a Toy Instrument","No Sub Bass","All Sounds Pitched to C"
-  ]
+    g: ["Lofi HipHop", "UK Drill", "Dark Trap", "Industrial", "Acid House", "Boom Bap", "Ambient", "Phonk", "Synthwave", "Glitch", "Hardcore", "IDM", "Jungle", "DnB", "Grime", "Industrial", "Gabber", "Math Rock", "Dubstep", "Hyperpop", "Footwork", "Jersey Club", "Vaporwave", "Riddim", "Midwest Emo", "Shoegaze", "Nu-Metal", "G-Funk", "Memphis", "Electro", "Breakcore", "Neurofunk", "Tech House", "Minimal", "Witch House", "Dub Techno", "Leftfield Bass"],
+    k: ["Am", "Cm", "F#m", "Em", "Dm", "Gm", "Bbm", "Fm", "C#m", "Eb Maj", "No Key", "B Phryg", "D Dorian", "C Lydian", "G Mixo"],
+    t: ["70-90", "120-130", "140", "85", "170+", "110", "Free", "160", "100", "60", "95", "135", "150"],
+    s: ["Intro-A-B-A", "No Intro", "Build>Drop", "Loop Based", "One Take", "A-B-C-D", "Chorus 1st", "Fade In/Out"],
+    w: [
+        { text: "NO PRESETS", desc: "Initialize every synth patch from scratch." },
+        { text: "MONOPHONIC", desc: "No chords. Single notes only." },
+        { text: "NO HI-HATS", desc: "Use foley or noise for top end." },
+        { text: "VOICE ONLY", desc: "Every sound must be your voice." },
+        { text: "REVERSE", desc: "Every audio clip must be reversed." },
+        { text: "10 MIN LIMIT", desc: "Finish the loop in 10 minutes." },
+        { text: "ONE SYNTH", desc: "Only one plugin instance allowed." },
+        { text: "NO SNARE", desc: "Find a different accent." },
+        { text: "RESAMPLE", desc: "Bounce, process, bounce again." },
+        { text: "NO GRID", desc: "Turn off snap. Human feel only." },
+        { text: "SILENCE", desc: "Include 4 bars of silence." },
+        { text: "NO KICK", desc: "Use bass or toms for low end." },
+        { text: "BITCRUSH", desc: "Everything at 12-bit or lower." },
+        { text: "MONO MIX", desc: "No panning allowed." }
+    ]
 };
 
-/* =========================
-   STATE
-========================= */
+const SCALES = { "Minor": [0,2,3,5,7,8,10], "Major": [0,2,4,5,7,9,11], "Phrygian": [0,1,3,5,7,8,10], "Dorian": [0,2,3,5,7,9,10] };
+
+// --- STATE ---
 let locks = { g:false, k:false, t:false, s:false, w:false };
-let currentIndices = { g:0, k:0, t:0, s:0, w:0 };
+let cur = { g:0, k:0, t:0, s:0, w:0 };
+let isPlaying = false;
+let currentBlob = null;
 let scrambleIntervals = {};
+let uiBeepTimer = null;
 
-/* =========================
-   HELPERS
-========================= */
-const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789//";
+// --- AUDIO ---
+let synth, ghostSynth, kick, snare, hat, filter, dist, delay, reverb, limiter, master, recorder, masterGate, seq, drumSeq, waveform, meter, uiSynth, uiCrusher; 
 
-function updateStats(){
-  document.getElementById('batch-no').innerText = `BATCH: ${String(Math.floor(Math.random()*99999)).padStart(5,'0')}`;
-  const total = DB.g.length * DB.k.length * DB.t.length * DB.s.length * DB.w.length;
-  document.getElementById('combo-count').innerText = `${total.toLocaleString()} REALITIES`;
-  generateBarcode();
+// --- UTILS ---
+function updateStats() {
+    const total = DB.g.length * DB.k.length * DB.t.length * DB.s.length * DB.w.length;
+    document.getElementById('combo-count').innerText = `${total.toLocaleString()} REALITIES`;
+    generateBarcode();
 }
 
-function scramble(id, final){
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (scrambleIntervals[id]) clearInterval(scrambleIntervals[id]);
-
-  let iter = 0;
-  el.classList.add('scrambling');
-
-  scrambleIntervals[id] = setInterval(()=>{
-    el.textContent = final.split("").map((ch,i)=>{
-      if (i < iter) return final[i];
-      return chars[Math.floor(Math.random()*chars.length)];
-    }).join("");
-
-    if (iter >= final.length){
-      clearInterval(scrambleIntervals[id]);
-      el.textContent = final;
-      el.classList.remove('scrambling');
+function generateBarcode() {
+    const c = document.getElementById('barcode');
+    c.innerHTML = '';
+    for(let i=0; i<40; i++) {
+        let d = document.createElement('div'); d.className = 'bar';
+        d.style.width = Math.random() * 4 + 1 + 'px';
+        d.style.opacity = Math.random() > 0.5 ? 0.8 : 0.3;
+        if(Math.random()>0.9) d.style.opacity = 0;
+        c.appendChild(d);
     }
-    iter += .5;
-  },30);
 }
 
-/* --- Responsive barcode: fills row & redraws on resize --- */
-function generateBarcode(){
-  const container = document.getElementById('barcode');
-  if (!container) return;
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function rand(min, max) { return Math.random() * (max - min) + min; }
 
-  const W = container.clientWidth || 0;
-  container.innerHTML = '';
+// --- VISUALIZER ---
+function drawScope() {
+    requestAnimationFrame(drawScope);
+    const canvas = document.getElementById('visualizer');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.clientWidth; 
+    const h = canvas.height = canvas.clientHeight;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = '#020202'; ctx.fillRect(0,0,w,h);
+    
+    // Grid Line
+    ctx.strokeStyle = '#111'; ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+    
+    if(waveform && meter) {
+        const v = waveform.getValue();
+        ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = '#00ff41';
+        let x = 0; const slice = w / v.length;
+        for(let i=0; i<v.length; i++) {
+            const y = (v[i] * h/2) + h/2;
+            if(i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            x += slice;
+        }
+        ctx.stroke();
 
-  let x = 0;
-  while (x < W){
-    const bar = document.createElement('div');
-    bar.className = 'bar';
-    const w = Math.max(3, Math.floor(Math.random()*8)); // 3-10px
-    bar.style.width = w + 'px';
-    bar.style.opacity = Math.random() > 0.65 ? (0.3 + Math.random()*0.6) : 0.25;
-    container.appendChild(bar);
-    x += w + 2; // + gap (must match CSS gap)
-  }
-}
-
-let __barcodeTimer;
-window.addEventListener('resize', ()=>{
-  clearTimeout(__barcodeTimer);
-  __barcodeTimer = setTimeout(generateBarcode, 120);
-});
-
-/* =========================
-   INIT / GENERATE
-========================= */
-document.getElementById('btn-init').addEventListener('click', async ()=>{
-  const btn = document.getElementById('btn-init');
-  btn.textContent = "CONNECTING…";
-  await new Promise(r=>setTimeout(r,400));
-
-  document.getElementById('session-id').textContent =
-    `ID: ${String(Math.floor(Math.random()*99999)).padStart(5,'0')}`;
-  updateStats();
-
-  const overlay = document.getElementById('overlay');
-  overlay.style.opacity = 0;
-  setTimeout(()=>{
-    overlay.style.display = 'none';
-    document.getElementById('app').classList.add('visible');
-    triggerGen(false, true); // silent first gen
-  }, 500);
-});
-
-document.getElementById('btn-gen').addEventListener('click', ()=>triggerGen(false));
-
-function triggerGen(skipText=false, silent=false){
-  const btn = document.getElementById('btn-gen');
-  btn.disabled = true; btn.textContent = "COMPUTING…";
-
-  if (!skipText){
-    for (const k in DB){
-      if (!locks[k]){
-        const idx = Math.floor(Math.random()*DB[k].length);
-        currentIndices[k] = idx;
-        scramble(`out-${k}`, DB[k][idx]);
-      }
+        const level = meter.getValue();
+        const l = Math.max(0, Math.min(1, (level[0] + 60) / 60));
+        const r = Math.max(0, Math.min(1, (level[1] + 60) / 60));
+        document.getElementById('meter-l').style.height = `${l * 100}%`;
+        document.getElementById('meter-r').style.height = `${r * 100}%`;
+        
+        const clip = (level[0] > -1 || level[1] > -1);
+        document.getElementById('meter-l').className = clip ? "meter-bar clip" : "meter-bar";
+        document.getElementById('meter-r').className = clip ? "meter-bar clip" : "meter-bar";
     }
-    updateStats();
-  }
-
-  setTimeout(()=>{ btn.disabled=false; btn.textContent="GENERATE"; }, 600);
 }
 
-/* Locks */
-document.querySelectorAll('.btn-lock').forEach(b=>{
-  b.addEventListener('click', e=>{
-    const key = e.currentTarget.dataset.id;
-    locks[key] = !locks[key];
-    e.currentTarget.textContent = locks[key] ? "LOCKED" : "LOCK";
-    e.currentTarget.classList.toggle('locked', locks[key]);
-  });
+// --- SCRAMBLE ---
+const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ//01";
+function scramble(id, final) {
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(scrambleIntervals[id]) clearInterval(scrambleIntervals[id]);
+    let iter = 0;
+    el.classList.add('scrambling');
+    scrambleIntervals[id] = setInterval(() => {
+        el.innerText = final.split("").map((l, i) => {
+            if(i < iter) return final[i];
+            return chars[Math.floor(Math.random() * chars.length)];
+        }).join("");
+        if(iter >= final.length) { 
+            clearInterval(scrambleIntervals[id]); 
+            el.innerText = final; 
+            el.classList.remove('scrambling');
+        }
+        iter += 1/2;
+    }, 30);
+}
+
+// --- INIT ---
+document.getElementById('btn-init').onclick = async () => {
+    const btn = document.getElementById('btn-init');
+    const ui = document.getElementById('init-ui');
+    const log = document.getElementById('boot-log');
+    
+    ui.style.display = 'none';
+    log.style.display = 'flex';
+    
+    const lines = ["> BIOS_CHECK... OK", "> MEMORY... OK", "> AUDIO_CORE... MOUNTED", "> SYSTEM_READY"];
+
+    try {
+        await Tone.start();
+        Tone.Transport.stop(); Tone.Transport.cancel();
+        
+        // UI SFX
+        uiCrusher = new Tone.BitCrusher(4).toDestination();
+        uiSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "square" },
+            envelope: { attack: 0.001, decay: 0.02, sustain: 0 },
+            volume: -15
+        }).connect(uiCrusher);
+
+        // Master
+        limiter = new Tone.Limiter(-1).toDestination();
+        master = new Tone.Gain(0.8).connect(limiter);
+        recorder = new Tone.Recorder();
+        master.connect(recorder);
+        masterGate = new Tone.Gain(0).connect(master);
+        waveform = new Tone.Waveform(128);
+        meter = new Tone.Meter({ channels: 2 });
+        master.connect(waveform).connect(meter);
+
+        // FX Setup
+        reverb = new Tone.Reverb(3).connect(masterGate);
+        delay = new Tone.PingPongDelay("8n", 0.3).connect(reverb);
+        dist = new Tone.Distortion(0.1).connect(delay);
+        filter = new Tone.AutoFilter("4n").connect(dist).start();
+
+        // Drums (Pure Synthesis)
+        kick = new Tone.MembraneSynth().connect(masterGate);
+        snare = new Tone.NoiseSynth({ envelope: { attack: 0.001, decay: 0.2, sustain: 0 } }).connect(masterGate);
+        hat = new Tone.MetalSynth({ envelope: { attack: 0.001, decay: 0.05 }, harmonicity: 5.1, modulationIndex: 32 }).connect(masterGate);
+        kick.volume.value = -6; snare.volume.value = -12; hat.volume.value = -20;
+
+        // Boot Animation
+        for(let l of lines) {
+            let d = document.createElement('div'); 
+            // Text is white, "OK" is green
+            d.innerHTML = l.replace("OK", "<span class='log-success'>OK</span>");
+            log.appendChild(d);
+            uiSynth.triggerAttackRelease("C6", "32n");
+            await new Promise(r => setTimeout(r, 350));
+        }
+
+        // Reveal
+        await new Promise(r => setTimeout(r, 500));
+        document.getElementById('startup-overlay').style.opacity = 0;
+        setTimeout(() => {
+            document.getElementById('startup-overlay').style.display = 'none';
+            document.getElementById('app-container').classList.add('visible');
+            document.getElementById('status-light').classList.add('active');
+            document.getElementById('session-id').innerText = `ID: ${Math.floor(Math.random()*99999)}`;
+            updateStats();
+            drawScope();
+            triggerGen(false, true); // Silent first gen
+        }, 500);
+
+    } catch (e) {
+        console.error(e);
+        log.innerHTML += `<br><span style="color:var(--err)">FATAL: ${e}</span>`;
+    }
+};
+
+// --- GENERATE ---
+document.getElementById('gen-btn').onclick = () => triggerGen(false);
+
+function startUIBeeps() {
+    if(uiBeepTimer) clearInterval(uiBeepTimer);
+    uiBeepTimer = setInterval(() => {
+        const n = ["C6","C#6","D6","D#6"][Math.floor(Math.random()*4)];
+        if(uiSynth) uiSynth.triggerAttackRelease(n, "64n");
+    }, 60);
+}
+function stopUIBeeps() { if(uiBeepTimer) clearInterval(uiBeepTimer); }
+
+function triggerGen(skipText = false, silentMode = false) {
+    const btn = document.getElementById('gen-btn');
+    btn.disabled = true; btn.innerText = "COMPUTING...";
+    
+    if(!silentMode) startUIBeeps();
+
+    if(!skipText) {
+        for(let k in DB) {
+            if(!locks[k]) {
+                const idx = Math.floor(Math.random() * DB[k].length);
+                cur[k] = idx;
+                const val = (k === 'w') ? DB[k][idx].text : DB[k][idx];
+                scramble(`out-${k}`, val);
+            }
+        }
+        updateStats();
+    }
+
+    setTimeout(() => {
+        try { if (!silentMode) buildPatch(); } 
+        catch(e) { console.error(e); } 
+        finally {
+            stopUIBeeps();
+            btn.disabled = false; 
+            btn.innerText = "GENERATE BRIEF";
+        }
+    }, 600); 
+}
+
+function generateNotes(keyString, count) {
+    const roots = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"];
+    let root = "C";
+    let scale = SCALES["Minor"];
+    
+    if (keyString) {
+        if (keyString.includes("Maj")) scale = SCALES["Major"];
+        else if (keyString.includes("Phryg")) scale = SCALES["Phrygian"];
+        else if (keyString.includes("Dorian")) scale = SCALES["Dorian"];
+        for(let r of roots) { if(keyString.startsWith(r)) { root = r; break; } }
+    }
+
+    let melody = [];
+    for(let i=0; i<count; i++) {
+        if (Math.random() > 0.6) { melody.push(null); } 
+        else {
+            const move = Math.floor(Math.random() * 5) - 2; 
+            let noteIndex = Math.abs(Math.round(i + move)) % scale.length;
+            const semitone = scale[noteIndex];
+            try {
+                const note = Tone.Frequency(root + "3").transpose(semitone);
+                melody.push(note.toNote());
+            } catch (e) { melody.push("C3"); }
+        }
+    }
+    return melody;
+}
+
+function buildPatch() {
+    if(masterGate) masterGate.gain.value = 0;
+    Tone.Transport.stop(); Tone.Transport.cancel();
+    isPlaying = false; updatePlayBtn();
+    document.getElementById('audio-panel').classList.remove('active');
+    document.getElementById('audio-status').innerText = "STANDBY";
+    document.getElementById('audio-status').style.color = "var(--dim)";
+
+    if(synth) synth.dispose();
+    if(ghostSynth) ghostSynth.dispose();
+    if(seq) seq.dispose();
+    if(drumSeq) drumSeq.dispose();
+
+    const type = pick(["fatsawtooth", "fatsquare", "pulse", "fm"]);
+    if (type === "fm") {
+        synth = new Tone.FMSynth({ harmonicity: rand(0.5, 2), modulationIndex: rand(1, 10) }).connect(filter);
+    } else if (type === "pulse") {
+        synth = new Tone.MonoSynth({ oscillator: { type: "pulse", width: 0.5 } }).connect(filter);
+    } else {
+        synth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: type, count: 2, spread: 20 },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 1 }
+        }).connect(filter);
+    }
+    synth.volume.value = -8;
+
+    ghostSynth = new Tone.FatOscillator("C2", "sine", 40).connect(reverb).start();
+    ghostSynth.volume.value = -20;
+
+    dist.distortion = Math.random() * 0.5;
+    filter.frequency.value = pick(["2n", "4n", "8n"]);
+
+    const keyText = document.getElementById('out-k').innerText;
+    const melodyNotes = generateNotes(keyText, 16);
+    
+    seq = new Tone.Sequence((time, note) => {
+        if (synth && !synth.disposed && note) synth.triggerAttackRelease(note, "8n", time);
+    }, melodyNotes, "16n");
+    seq.start(0);
+
+    const roots = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"];
+    let droneNote = "C2";
+    for(let r of roots) { if(keyText.startsWith(r)) { droneNote = r + "2"; break; } }
+    ghostSynth.frequency.value = droneNote;
+
+    // Drums
+    const kPat = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
+    if(Math.random()>0.5) kPat[14] = 1; 
+    
+    drumSeq = new Tone.Sequence((time, i) => {
+        if (kPat[i%16]) kick.triggerAttackRelease("C1", "8n", time);
+        if (i % 4 === 2) snare.triggerAttackRelease("16n", time); 
+        if (i % 2 === 0) hat.triggerAttackRelease("32n", time, Math.random()*0.5 + 0.5);
+    }, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], "16n");
+    drumSeq.start(0);
+
+    document.getElementById('patch-name').innerText = `${type.toUpperCase()} + GHOST + DRUMS`;
+    document.getElementById('btn-play').disabled = false;
+    document.getElementById('btn-dl').disabled = false;
+    currentBlob = null;
+}
+
+// --- CONTROL ---
+document.getElementById('btn-play').onclick = async () => {
+    if(Tone.context.state !== 'running') await Tone.context.resume();
+    if(isPlaying) {
+        masterGate.gain.rampTo(0, 0.1);
+        setTimeout(() => { Tone.Transport.stop(); }, 100);
+        isPlaying = false;
+        document.getElementById('audio-panel').classList.remove('active');
+        document.getElementById('audio-status').innerText = "STANDBY";
+        document.getElementById('audio-status').style.color = "var(--dim)";
+    } else {
+        Tone.Transport.position = 0; Tone.Transport.start();
+        masterGate.gain.rampTo(1, 0.1);
+        isPlaying = true;
+        document.getElementById('audio-panel').classList.add('active');
+        document.getElementById('audio-status').innerText = "LIVE";
+        document.getElementById('audio-status').style.color = "var(--active-color)";
+    }
+    updatePlayBtn();
+};
+
+function updatePlayBtn() {
+    const btn = document.getElementById('btn-play');
+    if(isPlaying) { btn.innerText = "STOP"; btn.classList.add('active'); }
+    else { btn.innerText = "PLAY LOOP"; btn.classList.remove('active'); }
+}
+
+document.getElementById('btn-dl').onclick = async () => {
+    const btn = document.getElementById('btn-dl');
+    if(currentBlob) {
+        const url = URL.createObjectURL(currentBlob);
+        const a = document.createElement('a'); a.href = url; a.download = 'basement_noise.webm'; a.click();
+    } else {
+        if(isPlaying) document.getElementById('btn-play').click();
+        btn.disabled = true; btn.innerText = "REC...";
+        recorder.start(); Tone.Transport.position = 0; Tone.Transport.start(); masterGate.gain.setValueAtTime(1, Tone.now());
+        document.getElementById('audio-panel').classList.add('active');
+        setTimeout(async () => {
+            Tone.Transport.stop(); masterGate.gain.setValueAtTime(0, Tone.now());
+            currentBlob = await recorder.stop();
+            btn.disabled = false; btn.innerText = "SAVE .WAV"; btn.classList.add('active');
+            document.getElementById('audio-panel').classList.remove('active');
+        }, 4000); 
+    }
+};
+
+// --- MODAL & LOCKS ---
+function showInfo() {
+    const d = DB.w[cur.w];
+    document.getElementById('modal-title').innerText = d.text;
+    document.getElementById('modal-desc').innerText = d.desc;
+    document.getElementById('modal-overlay').classList.add('visible');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('visible'); }
+
+document.querySelectorAll('.lock').forEach(b => {
+    b.onclick = (e) => {
+        const k = e.target.dataset.id; locks[k] = !locks[k];
+        e.target.innerText = locks[k] ? "LOCKED" : "LOCK";
+        e.target.classList.toggle('locked');
+    }
 });
 </script>
 </body>
